@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:asana.com)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

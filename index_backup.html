@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EndlessTesting.ai - AI-Powered Continuous A/B Testing</title>
+    <meta name="description" content="Revolutionary A/B testing platform powered by AI that continuously improves your website through endless automated testing and optimization.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&family=Merriweather:wght@300;400;700;900&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{--primary:#FF595E;--primary-dark:#e74c50;--secondary:#A5D8FF;--accent:#C5D86D;--dark-green:#053225;--licorice:#1F0812;--text:#1F0812;--text-light:#6b7280;--text-muted:#9ca3af;--bg:#ffffff;--bg-alt:#fafbfc;--bg-section:#f8fafc;--border:#e5e7eb;--border-light:#f1f5f9;--shadow:0 1px 3px rgba(0,0,0,0.1),0 1px 2px rgba(0,0,0,0.06);--shadow-lg:0 10px 25px rgba(0,0,0,0.1),0 4px 10px rgba(0,0,0,0.05);--bittersweet:#FF595E;--uranian-blue:#A5D8FF;--mindaro:#C5D86D;--dark-green:#053225;--licorice:#1F0812}
+        body{font-family:'Inter',system-ui,-apple-system,sans-serif;line-height:1.6;color:var(--text);background:var(--bg)}
+        .container{max-width:1600px;margin:0 auto;padding:0 2rem}
+        .nav{background:#FCFAF8;border-bottom:1px solid var(--border-light);padding:1.25rem 0;position:sticky;top:0;z-index:100;backdrop-filter:blur(8px)}
+        .nav-content{display:flex;justify-content:space-between;align-items:center}
+        .logo{display:flex;align-items:flex-end;gap:0.75rem}
+        .logo-icon{height:1.8rem;width:auto}
+        .logo-text-container{display:flex;align-items:center;gap:0.35rem;line-height:1}
+        .logo-text{font-size:1.5rem;font-weight:600;color:#000000;font-family:'Merriweather',serif;letter-spacing:-0.01em}
+        .nav-links{display:flex;gap:2.5rem;list-style:none;align-items:center}
+        .nav-links a{text-decoration:none;color:var(--text);font-weight:500;transition:all 0.2s ease;padding:0.5rem 1rem;border-radius:6px;font-size:0.95rem;font-family:'Inter',sans-serif}
+        .nav-links a:hover{color:var(--primary);background:rgba(255,89,94,0.08)}
+        .hero{background:linear-gradient(135deg,#C5D86D 0%,#A5D8FF 65%);padding:5rem 0 2rem;color:var(--licorice)}
+        .hero-content{max-width:100%;margin:0 auto;text-align:left}
+        .hero-top{margin-bottom:2rem}
+        .hero h1{font-size:clamp(3rem,7vw,5rem);font-weight:700;margin-bottom:1.5rem;line-height:1.2;color:var(--dark-green);font-family:'Merriweather',serif;letter-spacing:0}
+        .hero-subtitle{font-size:1.5rem;margin-bottom:2rem;color:#1F0812;line-height:1.7;max-width:720px;font-weight:600}
+        .hero-ctas{display:flex;gap:1.25rem;justify-content:flex-start;margin-bottom:0;flex-wrap:wrap}
+        .hero-testimonial{display:flex;align-items:center;gap:1rem;padding:1rem 1.5rem;background:rgba(255,255,255,0.7);border-radius:12px;backdrop-filter:blur(8px);max-width:400px;border-left:3px solid var(--accent);margin-bottom:4rem}
+        .hero-testimonial-avatar{width:3rem;height:3rem;border-radius:50%;object-fit:cover;border:2px solid var(--accent)}
+        .hero-testimonial-content{flex:1}
+        .hero-testimonial-text{font-size:0.9rem;font-style:italic;color:var(--text);margin-bottom:0.25rem;line-height:1.4}
+        .hero-testimonial-author{font-size:0.85rem;font-weight:600;color:var(--dark-green)}
+        .cta-button{display:inline-flex;align-items:center;padding:1rem 2rem;border-radius:12px;text-decoration:none;font-weight:600;font-size:1rem;transition:all 0.3s ease;border:2px solid transparent;position:relative;overflow:hidden}
+        .cta-primary{background:var(--licorice);color:white;border-color:var(--licorice)}
+        .cta-primary:hover{background:#000000;transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+        .cta-secondary{background:white;color:var(--dark-green);border:2px solid var(--dark-green)}
+        .cta-secondary:hover{background:var(--dark-green);color:white;transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+        .hero-visual{position:relative;height:auto;max-width:100%;margin:0 auto;display:flex;justify-content:center;gap:1.5rem;align-items:center;padding:0}
+        .hero-person{position:relative;flex:1;border-radius:20px;overflow:hidden;box-shadow:var(--shadow-lg);transition:transform 0.3s ease;background:white}
+        .hero-person-left{background:white}
+        .hero-person-right{background:white}
+        .hero-person img{width:100%;height:auto;display:block;object-fit:contain;}
+        .comparison-overlay{position:absolute;top:2rem;left:50%;transform:translateX(-50%);background:rgba(20,20,20,0.6);padding:0;border-radius:12px;box-shadow:0 0 50px rgba(255,255,255,0.8),0 0 100px rgba(255,255,255,0.6),0 0 150px rgba(255,255,255,0.4),var(--shadow-lg);max-width:600px;z-index:10;overflow:hidden;backdrop-filter:blur(12px)}
+        .comparison-table{width:100%;border-collapse:collapse}
+        .comparison-table th{padding:1rem 1.5rem;font-size:1.1rem;font-weight:600;font-family:'Merriweather',serif;color:rgba(255,255,255,0.7);border-bottom:none;text-align:left;vertical-align:top}
+        .comparison-table th:first-child{border-right:none}
+        .comparison-table th:last-child{border:2px solid rgba(197,216,109,0.6);border-bottom:none;border-top-left-radius:12px;border-top-right-radius:12px}
+        .comparison-table td{padding:0.85rem 1.5rem;font-size:1rem;font-weight:400;line-height:1.5;opacity:0;max-height:0;overflow:hidden;transition:all 0.3s ease;text-align:left;font-family:'Georgia',serif}
+        .comparison-table td:first-child{color:var(--primary);border-right:none}
+        .comparison-table td:last-child{color:#C5D86D;border-left:2px solid rgba(197,216,109,0.6);border-right:2px solid rgba(197,216,109,0.6)}
+        .comparison-table tbody tr:last-child td:last-child{border-bottom:2px solid rgba(197,216,109,0.6);border-bottom-left-radius:12px;border-bottom-right-radius:12px}
+        .comparison-table tr.visible td{opacity:1;max-height:100px;padding:0.85rem 1.5rem}
+        .social-proof{padding:4rem 0;background:var(--bg-section);text-align:center}
+        .social-proof h2{font-size:2rem;font-weight:700;margin-bottom:2rem;color:var(--dark-green);font-family:'Playfair Display',serif}
+        .company-logos{display:flex;justify-content:center;align-items:center;gap:3rem;flex-wrap:wrap;opacity:0.6}
+        .company-logo{height:40px;background:var(--text-light);border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;font-weight:600;min-width:120px}
+        .key-features{padding:6rem 0;background:var(--bg)}
+        .feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:4rem;margin-top:5rem}
+        .feature-item{text-align:center}
+        .feature-item h3{font-size:1.5rem;font-weight:700;margin-bottom:1rem;color:var(--dark-green);font-family:'Playfair Display',serif}
+        .feature-item p{color:var(--text-light);line-height:1.7;margin-bottom:1.5rem;font-size:1.1rem}
+        .feature-link{color:var(--primary);text-decoration:none;font-weight:600}
+        .feature-link:hover{text-decoration:underline}
+        .how-it-works{padding:6rem 0;background:var(--bg-section)}
+        .steps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:4rem;margin-top:5rem}
+        .step-item{text-align:center;padding:2rem}
+        .step-number{width:4rem;height:4rem;background:var(--primary);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.5rem;margin:0 auto 1.5rem}
+        .step-item h3{font-size:1.5rem;font-weight:700;margin-bottom:1rem;color:var(--dark-green);font-family:'Playfair Display',serif}
+        .step-item p{color:var(--text-light);font-size:1.1rem;line-height:1.7}
+        .use-cases{padding:6rem 0;background:var(--bg)}
+        .use-cases-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:4rem;margin-top:5rem}
+        .use-case{background:white;padding:3rem;border-radius:16px;border:1px solid var(--border-light);transition:all 0.3s ease;box-shadow:var(--shadow);position:relative}
+        .use-case:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:var(--accent)}
+        .testimonial:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:var(--secondary)}
+        .use-case h3{font-size:1.5rem;font-weight:700;margin-bottom:1.25rem;color:var(--dark-green);font-family:'Playfair Display',serif}
+        .use-case p{color:var(--text-light);line-height:1.7;font-size:1.1rem}
+        .testimonials{padding:6rem 0;background:var(--bg-section);text-align:center}
+        .testimonial-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:3rem;margin-top:5rem}
+        .testimonial{background:white;padding:2.5rem;border-radius:16px;box-shadow:var(--shadow);border:1px solid var(--border-light);transition:all 0.3s ease;position:relative}
+        .testimonial-text{font-style:italic;color:var(--text-light);margin-bottom:1rem;line-height:1.7}
+        .testimonial-author{font-weight:600;color:var(--text)}
+        .final-cta{padding:6rem 0;background:var(--dark-green);color:white;text-align:center}
+        .final-cta h2{font-size:2.5rem;font-weight:800;margin-bottom:2rem;color:white;font-family:'Playfair Display',serif}
+        .final-cta .cta-button{background:white;color:var(--dark-green);font-size:1.2rem;padding:1.2rem 2.5rem;border:2px solid white}
+        .final-cta .cta-button:hover{background:rgba(255,255,255,0.9);transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+        .features{padding:6rem 0;background:var(--bg-section)}
+        .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:3rem;margin-top:4rem}
+        .feature-card{background:white;padding:3rem;border-radius:16px;box-shadow:var(--shadow);transition:all 0.3s ease;border:1px solid var(--border-light);position:relative;overflow:hidden}
+        .feature-card:hover{transform:translateY(-6px);box-shadow:var(--shadow-lg);border-color:var(--secondary)}
+        .feature-icon{width:4.5rem;height:4.5rem;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:16px;display:flex;align-items:center;justify-content:center;margin-bottom:2rem;color:white;font-size:1.5rem;box-shadow:var(--shadow)}
+        .feature-card h3{font-size:1.5rem;font-weight:700;margin-bottom:1.25rem;color:var(--dark-green);font-family:'Playfair Display',serif}
+        .feature-card p{color:var(--text-light);line-height:1.7;font-size:1.1rem}
+        .section-title{text-align:center;font-size:clamp(2.5rem,5vw,3.5rem);font-weight:800;margin-bottom:1.5rem;color:var(--dark-green);font-family:'Playfair Display',serif;letter-spacing:-0.02em}
+        .section-subtitle{text-align:center;font-size:1.2rem;color:var(--text-light);max-width:680px;margin:0 auto 5rem;line-height:1.6}
+        .how-it-works{padding:6rem 0;background:white}
+        .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:3rem;margin-top:4rem}
+        .step{text-align:center;position:relative}
+        .step-number{width:4rem;height:4rem;background:var(--primary);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.5rem;margin:0 auto 1.5rem}
+        .step h3{font-size:1.5rem;font-weight:600;margin-bottom:1rem;color:var(--text)}
+        .step p{color:var(--text-light);font-size:1.1rem;line-height:1.7}
+        .pricing{padding:6rem 0;background:var(--bg-section)}
+        .pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:3rem;margin-top:5rem}
+        .pricing-card{background:white;padding:3rem;border-radius:16px;box-shadow:var(--shadow);text-align:center;position:relative;transition:all 0.3s ease;border:1px solid var(--border-light)}
+        .pricing-card.featured{border:2px solid var(--primary);transform:scale(1.02)}
+        .pricing-card:hover{transform:translateY(-6px);box-shadow:var(--shadow-lg);border-color:var(--secondary)}
+        .pricing-card.featured:hover{transform:scale(1.02) translateY(-4px)}
+        .pricing-badge{position:absolute;top:-0.75rem;left:50%;transform:translateX(-50%);background:var(--primary);color:white;padding:0.5rem 1.5rem;border-radius:20px;font-size:0.875rem;font-weight:600}
+        .pricing-card h3{font-size:1.75rem;font-weight:700;margin-bottom:1rem;color:var(--dark-green);font-family:'Playfair Display',serif}
+        .price{font-size:3.5rem;font-weight:700;color:var(--primary);margin-bottom:0.5rem}
+        .price-period{color:var(--text-light);font-size:1.1rem}
+        .pricing-features{list-style:none;margin:2rem 0;text-align:left}
+        .pricing-features li{padding:0.75rem 0;border-bottom:1px solid var(--border);color:var(--text-light);font-size:1.1rem}
+        .pricing-features li:last-child{border-bottom:none}
+        .footer{background:var(--licorice);color:white;padding:4rem 0 2rem}
+        .footer-content{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:3rem;margin-bottom:3rem}
+        .footer h3{font-size:1.25rem;font-weight:600;margin-bottom:1rem;color:white}
+        .footer p{opacity:0.8;line-height:1.6;color:#a0aec0}
+        .footer-bottom{border-top:1px solid #4a5568;padding-top:2rem;margin-top:2rem;opacity:0.8;text-align:center;color:#a0aec0}
+        @media (max-width:768px){
+            .hero{padding:2.5rem 0 2rem}
+            .hero-visual{flex-direction:column;gap:1.5rem}
+            .hero-person{max-width:100%}
+            .nav-links{display:none}
+            .features-grid,.pricing-grid{grid-template-columns:1fr}
+            .pricing-card.featured{transform:none}
+            .pricing-card.featured:hover{transform:translateY(-4px)}
+        }
+        @media (max-width:480px){
+            .hero h1{font-size:clamp(2rem,8vw,2.5rem)}
+            .hero-subtitle{font-size:1rem}
+        }
+        .ai-badge{display:inline-block;background:var(--primary);color:white;padding:0.5rem 1rem;border-radius:20px;font-size:0.875rem;font-weight:600;margin-bottom:1rem}
+        .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2rem;margin:4rem 0}
+        .stat{text-align:center;padding:2rem;background:white;border-radius:12px;box-shadow:var(--shadow);border:1px solid var(--border)}
+        .stat-number{font-size:3rem;font-weight:700;color:var(--primary);display:block}
+        .stat-label{color:var(--text-light);font-size:1rem;text-transform:uppercase;letter-spacing:0.05em;margin-top:0.5rem}
+        .image-section{padding:6rem 0;background:white}
+        .image-grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center}
+        .image-content h2{font-size:2.5rem;font-weight:700;margin-bottom:1.5rem;color:var(--text)}
+        .image-content p{font-size:1.25rem;color:var(--text-light);line-height:1.7;margin-bottom:2rem}
+        .image-placeholder{height:400px;background:#f7fafc;border:2px dashed #e2e8f0;border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:1.1rem}
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="container">
+            <div class="nav-content">
+                <div class="logo">
+                    <img src="images/icon.png" alt="Endless Testing Icon" class="logo-icon">
+                    <div class="logo-text-container">
+                        <div class="logo-text">Endless Testing</div>
+                    </div>
+                </div>
+                <ul class="nav-links">
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#how-it-works">How it Works</a></li>
+                    <li><a href="#pricing">Pricing</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-top">
+                    <h1>Now your website optimizes itself</h1>
+                    <p class="hero-subtitle">Fully autonomous AI web experimentation</p>
+                    <div class="hero-ctas">
+                        <a href="#pricing" class="cta-button cta-primary">Get Started Free</a>
+                        <a href="#how-it-works" class="cta-button cta-secondary">See How It Works</a>
+                    </div>
+                </div>
+                <div class="hero-testimonial">
+                    <img src="images/jp.jpg" alt="JP Bisson" class="hero-testimonial-avatar">
+                    <div class="hero-testimonial-content">
+                        <p class="hero-testimonial-text">"Game-changing for our conversion rates"</p>
+                        <p class="hero-testimonial-author">JP Bisson, CEO Truely.com</p>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="hero-person hero-person-left">
+                        <img src="images/guy.png" alt="Frustrated marketer stuck running manual tests">
+                    </div>
+                    <div class="hero-person hero-person-right">
+                        <img src="images/girl.png" alt="Marketer celebrating results with EndlessTesting.ai">
+                    </div>
+                    <div class="comparison-overlay">
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Traditional web<br>experimentation</th>
+                                    <th>With endlesstesting.ai</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="visible">
+                                    <td>Manual experiment creation</td>
+                                    <td>Fully automated experiments</td>
+                                </tr>
+                                <tr>
+                                    <td>Constantly checking results</td>
+                                    <td>AI monitors results 24/7</td>
+                                </tr>
+                                <tr>
+                                    <td>Slow hypothesis generation</td>
+                                    <td>Endless test ideas generated</td>
+                                </tr>
+                                <tr>
+                                    <td>Time-consuming analysis</td>
+                                    <td>Instant insights & analysis</td>
+                                </tr>
+                                <tr>
+                                    <td>Limited test velocity</td>
+                                    <td>Maximum test velocity</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="social-proof">
+        <div class="container">
+            <h2>The world's most innovative companies trust EndlessTesting.ai</h2>
+            <div class="company-logos">
+                <div class="company-logo">Company A</div>
+                <div class="company-logo">Company B</div>
+                <div class="company-logo">Company C</div>
+                <div class="company-logo">Company D</div>
+                <div class="company-logo">Company E</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="key-features">
+        <div class="container">
+            <h2 class="section-title">What sets EndlessTesting.ai apart</h2>
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h3>Autonomous A/B Testing</h3>
+                    <p>Let our AI take the wheel. From test creation to deployment and analysis, our platform handles the entire optimization lifecycle, so your team can focus on strategy.</p>
+                    <a href="#" class="feature-link">Learn about Autonomous Testing</a>
+                </div>
+                <div class="feature-item">
+                    <h3>Intelligent Test Replenishment</h3>
+                    <p>Never run out of test ideas again. Our AI analyzes your site and user behavior to continuously generate and deploy new, high-impact A/B tests.</p>
+                    <a href="#" class="feature-link">Meet the AI Engine</a>
+                </div>
+                <div class="feature-item">
+                    <h3>Deep Business Context</h3>
+                    <p>Our AI understands your business goals. It aligns testing strategies with your objectives, ensuring that every test contributes to your bottom line.</p>
+                    <a href="#" class="feature-link">Explore Business Integration</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="how-it-works" id="how-it-works">
+        <div class="container">
+            <h2 class="section-title">Get started in minutes</h2>
+            <div class="steps-grid">
+                <div class="step-item">
+                    <div class="step-number">1</div>
+                    <h3>Connect Your Site</h3>
+                    <p>Simply add our script to your website. No complex integration required.</p>
+                </div>
+                <div class="step-item">
+                    <div class="step-number">2</div>
+                    <h3>Set Your Goals</h3>
+                    <p>Tell our AI what you want to achieve, whether it's more sign-ups, sales, or engagement.</p>
+                </div>
+                <div class="step-item">
+                    <div class="step-number">3</div>
+                    <h3>Watch Your Growth</h3>
+                    <p>Our AI gets to work, autonomously running tests and optimizing your site for conversions. Track your progress in our intuitive dashboard.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="use-cases">
+        <div class="container">
+            <h2 class="section-title">See how EndlessTesting.ai drives results across your business</h2>
+            <div class="use-cases-grid">
+                <div class="use-case">
+                    <h3>Landing Page Optimization</h3>
+                    <p>Continuously improve your landing page conversion rates with AI-driven headline, copy, and CTA optimization.</p>
+                </div>
+                <div class="use-case">
+                    <h3>E-commerce Funnel</h3>
+                    <p>From product pages to checkout, our AI identifies and eliminates friction points to boost your revenue.</p>
+                </div>
+                <div class="use-case">
+                    <h3>SaaS Onboarding</h3>
+                    <p>Optimize your user onboarding flow to increase activation rates and reduce churn.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="testimonials">
+        <div class="container">
+            <h2 class="section-title">Don't just take our word for it</h2>
+            <div class="testimonial-grid">
+                <div class="testimonial">
+                    <p class="testimonial-text">"EndlessTesting.ai has revolutionized our conversion optimization. The AI never stops working, and our conversion rates have increased by 40% in just 3 months."</p>
+                    <p class="testimonial-author">- Sarah Johnson, CMO at TechCorp</p>
+                </div>
+                <div class="testimonial">
+                    <p class="testimonial-text">"Finally, an A/B testing platform that actually works autonomously. We've seen consistent improvements without any manual intervention."</p>
+                    <p class="testimonial-author">- Mike Chen, Growth Lead at StartupXYZ</p>
+                </div>
+                <div class="testimonial">
+                    <p class="testimonial-text">"The AI understands our business better than we do. Every test it creates is perfectly aligned with our goals."</p>
+                    <p class="testimonial-author">- Emily Rodriguez, VP Marketing at ScaleUp</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="final-cta">
+        <div class="container">
+            <h2>Ready to put your optimization on autopilot?</h2>
+            <a href="#pricing" class="cta-button">Start Your Free Trial</a>
+        </div>
+    </section>
+
+
+    <section class="pricing" id="pricing">
+        <div class="container">
+            <h2 class="section-title">Simple, Transparent Pricing</h2>
+            <p class="section-subtitle">Choose the plan that fits your needs. All plans include our core AI testing features.</p>
+            
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <h3>Starter</h3>
+                    <div class="price">$29<span class="price-period">/month</span></div>
+                    <ul class="pricing-features">
+                        <li>Up to 10,000 visitors/month</li>
+                        <li>Unlimited AI-generated tests</li>
+                        <li>Basic analytics dashboard</li>
+                        <li>Email support</li>
+                        <li>Mobile optimization</li>
+                    </ul>
+                    <a href="#" class="cta-button">Start Free Trial</a>
+                </div>
+                <div class="pricing-card featured">
+                    <div class="pricing-badge">Most Popular</div>
+                    <h3>Professional</h3>
+                    <div class="price">$99<span class="price-period">/month</span></div>
+                    <ul class="pricing-features">
+                        <li>Up to 100,000 visitors/month</li>
+                        <li>Advanced AI test generation</li>
+                        <li>Real-time analytics & reports</li>
+                        <li>Priority support</li>
+                        <li>Advanced segmentation</li>
+                        <li>API access</li>
+                    </ul>
+                    <a href="#" class="cta-button">Start Free Trial</a>
+                </div>
+                <div class="pricing-card">
+                    <h3>Enterprise</h3>
+                    <div class="price">Custom</div>
+                    <ul class="pricing-features">
+                        <li>Unlimited visitors</li>
+                        <li>Custom AI models</li>
+                        <li>Dedicated account manager</li>
+                        <li>24/7 phone support</li>
+                        <li>Custom integrations</li>
+                        <li>SLA guarantee</li>
+                    </ul>
+                    <a href="#" class="cta-button">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div>
+                    <h3>EndlessTesting.ai</h3>
+                    <p>The future of website optimization is here. Let AI continuously improve your conversions while you focus on growing your business.</p>
+                </div>
+                <div>
+                    <h3>Product</h3>
+                    <p>Features<br>Pricing<br>API Documentation<br>Integrations</p>
+                </div>
+                <div>
+                    <h3>Support</h3>
+                    <p>Help Center<br>Contact Us<br>Status Page<br>Community</p>
+                </div>
+                <div>
+                    <h3>Company</h3>
+                    <p>About Us<br>Blog<br>Careers<br>Privacy Policy</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 EndlessTesting.ai. All rights reserved. | Made with ❤️ for continuous growth.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Minimal JavaScript for smooth scrolling and basic interactions
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Simple performance monitoring
+        window.addEventListener('load', () => {
+            const loadTime = performance.now();
+            console.log(`Page loaded in ${loadTime.toFixed(2)}ms`);
+        });
+
+        // Unfold comparison table rows
+        const comparisonRows = document.querySelectorAll('.comparison-table tbody tr');
+        let currentRowIndex = 0;
+
+        setInterval(() => {
+            if (currentRowIndex < comparisonRows.length - 1) {
+                currentRowIndex++;
+                comparisonRows[currentRowIndex].classList.add('visible');
+            }
+        }, 1500);
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
