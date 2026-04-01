@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service - endlesstesting.ai</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: { 400: '#4ade80', 500: '#22c55e' },
+                        dark: { 900: '#0a0a0a', 800: '#171717', 700: '#262626' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #050505; color: #ffffff; }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+
+    <nav class="w-full border-b border-white/5 bg-dark-900/50 backdrop-blur-md">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center">
+            <a href="/" class="font-display font-bold text-xl tracking-tight">
+                <span class="text-gray-400">endless</span><span class="text-white">testing</span><span class="text-brand-400">.ai</span>
+            </a>
+        </div>
+    </nav>
+
+    <main class="flex-grow max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+        <h1 class="font-display text-3xl sm:text-4xl font-bold mb-2">Terms of Service</h1>
+        <p class="text-gray-500 mb-10">Last updated: April 1, 2026</p>
+
+        <div class="space-y-8 text-gray-300 leading-relaxed">
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">1. Agreement</h2>
+                <p>By using endlesstesting.ai ("the Service"), you agree to these Terms of Service. The Service is operated by CroLab ("we", "us"). If you do not agree, do not use the Service.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">2. Description of Service</h2>
+                <p>Endless Testing is an AI-powered A/B testing platform that autonomously generates, deploys, and evaluates website experiments. The Service includes:</p>
+                <ul class="list-disc list-inside mt-2 space-y-1 text-gray-400">
+                    <li>A JavaScript SDK that runs experiments on your website</li>
+                    <li>An AI engine that generates test variants targeting page copy</li>
+                    <li>A dashboard for monitoring test performance</li>
+                    <li>A CLI tool for managing tests and configuration</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">3. Account & Eligibility</h2>
+                <ul class="list-disc list-inside space-y-1 text-gray-400">
+                    <li>You must be at least 18 years old to use the Service</li>
+                    <li>You are responsible for maintaining the security of your account credentials</li>
+                    <li>You are responsible for all activity under your account</li>
+                    <li>One person or entity per account unless otherwise agreed</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">4. Subscription & Billing</h2>
+                <ul class="list-disc list-inside space-y-1 text-gray-400">
+                    <li>The Service is offered on a monthly subscription basis</li>
+                    <li>Payments are processed by Stripe</li>
+                    <li>Subscriptions renew automatically unless cancelled before the renewal date</li>
+                    <li>You may cancel your subscription at any time &mdash; access continues until the end of the current billing period</li>
+                    <li>Refunds are handled on a case-by-case basis; contact us within 7 days of a charge</li>
+                    <li>We reserve the right to change pricing with 30 days notice</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">5. Your Responsibilities</h2>
+                <p>When using the Service, you agree to:</p>
+                <ul class="list-disc list-inside mt-2 space-y-1 text-gray-400">
+                    <li>Only install the SDK on websites you own or are authorized to modify</li>
+                    <li>Not use the Service for illegal, harmful, or deceptive purposes</li>
+                    <li>Not attempt to reverse-engineer, decompile, or extract source code from the Service</li>
+                    <li>Not interfere with or disrupt the Service infrastructure</li>
+                    <li>Comply with all applicable laws, including data protection regulations, on your website</li>
+                    <li>Inform your website visitors about A/B testing in your own privacy policy</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">6. SDK & Website Modifications</h2>
+                <p>By installing the SDK on your website, you acknowledge that:</p>
+                <ul class="list-disc list-inside mt-2 space-y-1 text-gray-400">
+                    <li>The SDK will modify page content (text, headings, buttons) as part of A/B experiments</li>
+                    <li>Modifications are generated by AI and may not always be perfect</li>
+                    <li>You can stop all experiments instantly using the kill switch in the dashboard</li>
+                    <li>We are not liable for any negative impact of experiments on your website's performance or conversions</li>
+                    <li>You should review generated variants periodically to ensure they align with your brand</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">7. AI-Generated Content</h2>
+                <p>The Service uses AI models to generate test variants. You acknowledge that:</p>
+                <ul class="list-disc list-inside mt-2 space-y-1 text-gray-400">
+                    <li>AI-generated content may occasionally produce unexpected or suboptimal results</li>
+                    <li>We do not guarantee specific conversion improvements</li>
+                    <li>You retain ownership of your original website content</li>
+                    <li>AI-generated variants are provided as part of the Service and do not transfer IP rights</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">8. Data & Privacy</h2>
+                <p>Our handling of data is governed by our <a href="/privacy.html" class="text-brand-400 hover:underline">Privacy Policy</a>. By using the Service, you consent to the data practices described therein.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">9. Service Availability</h2>
+                <ul class="list-disc list-inside space-y-1 text-gray-400">
+                    <li>We aim for high availability but do not guarantee 100% uptime</li>
+                    <li>We may perform maintenance with reasonable notice</li>
+                    <li>The Service is provided "as is" without warranties of any kind</li>
+                    <li>We are not liable for losses resulting from service interruptions</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">10. Limitation of Liability</h2>
+                <p>To the maximum extent permitted by law, Endless Testing and its operators shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, or business opportunities, arising from your use of the Service.</p>
+                <p class="mt-2">Our total liability for any claim related to the Service shall not exceed the amount you paid us in the 12 months preceding the claim.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">11. Termination</h2>
+                <ul class="list-disc list-inside space-y-1 text-gray-400">
+                    <li>You may cancel your account at any time</li>
+                    <li>We may suspend or terminate accounts that violate these Terms</li>
+                    <li>Upon termination, your data will be deleted within 30 days</li>
+                    <li>Sections on liability, IP, and dispute resolution survive termination</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">12. Changes to Terms</h2>
+                <p>We may update these Terms from time to time. Material changes will be communicated via email or dashboard notification. Continued use after changes constitutes acceptance.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">13. Contact</h2>
+                <p>For questions about these Terms, contact us at <a href="mailto:hello@endlesstesting.ai" class="text-brand-400 hover:underline">hello@endlesstesting.ai</a>.</p>
+            </section>
+
+        </div>
+    </main>
+
+    <footer class="border-t border-white/5 py-8 text-center text-gray-600 text-sm">
+        <p>&copy; 2026 endlesstesting.ai &middot; <a href="/privacy.html" class="hover:text-white">Privacy</a> &middot; <a href="/terms.html" class="hover:text-white">Terms</a></p>
+    </footer>
+
+</body>
+</html>

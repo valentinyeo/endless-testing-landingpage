@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - endlesstesting.ai</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: { 400: '#4ade80', 500: '#22c55e' },
+                        dark: { 900: '#0a0a0a', 800: '#171717', 700: '#262626' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #050505; color: #ffffff; }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+
+    <nav class="w-full border-b border-white/5 bg-dark-900/50 backdrop-blur-md">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center">
+            <a href="/" class="font-display font-bold text-xl tracking-tight">
+                <span class="text-gray-400">endless</span><span class="text-white">testing</span><span class="text-brand-400">.ai</span>
+            </a>
+        </div>
+    </nav>
+
+    <main class="flex-grow max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+        <h1 class="font-display text-3xl sm:text-4xl font-bold mb-2">Privacy Policy</h1>
+        <p class="text-gray-500 mb-10">Last updated: April 1, 2026</p>
+
+        <div class="space-y-8 text-gray-300 leading-relaxed">
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">1. Who We Are</h2>
+                <p>endlesstesting.ai ("Endless Testing", "we", "us") is an AI-powered A/B testing platform operated by CroLab. This policy explains how we collect, use, and protect data when you use our website, dashboard, SDK, and CLI tools.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">2. Data We Collect</h2>
+
+                <h3 class="text-lg font-medium text-white mt-4 mb-2">2.1 Website Visitors (endlesstesting.ai)</h3>
+                <p>When you visit our marketing site, we collect:</p>
+                <ul class="list-disc list-inside mt-2 space-y-1 text-gray-400">
+                    <li>Page views, referrer, browser type, device type, country (via PostHog analytics)</li>
+                    <li>No personal data is collected unless you identify yourself (e.g., by signing up)</li>
+                </ul>
+
+                <h3 class="text-lg font-medium text-white mt-4 mb-2">2.2 Dashboard Users (app.endlesstesting.ai)</h3>
+                <p>When you create an account, we collect:</p>
+                <ul class="list-disc list-inside mt-2 space-y-1 text-gray-400">
+                    <li>Email address, name (via Clerk authentication)</li>
+                    <li>Usage data: tests created, domains added, dashboard interactions</li>
+                    <li>Payment information is processed by Stripe &mdash; we do not store credit card numbers</li>
+                </ul>
+
+                <h3 class="text-lg font-medium text-white mt-4 mb-2">2.3 SDK Data (Your Website Visitors)</h3>
+                <p>When you install our SDK on your website, the SDK collects from <em>your</em> visitors:</p>
+                <ul class="list-disc list-inside mt-2 space-y-1 text-gray-400">
+                    <li>Page URL, variant assignment, impressions, clicks, and conversion events</li>
+                    <li>A random session identifier (stored in localStorage, expires after 30 days)</li>
+                    <li>No personally identifiable information (PII) is collected by the SDK</li>
+                    <li>No cookies are set by the SDK &mdash; only localStorage is used</li>
+                    <li>IP addresses are not stored</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">3. How We Use Data</h2>
+                <ul class="list-disc list-inside space-y-1 text-gray-400">
+                    <li>To provide and improve the A/B testing service</li>
+                    <li>To allocate traffic to variants using Thompson sampling</li>
+                    <li>To determine statistical winners and generate new test variants</li>
+                    <li>To send transactional emails (account, billing)</li>
+                    <li>To understand how our website and dashboard are used (analytics)</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">4. Data Storage & Security</h2>
+                <ul class="list-disc list-inside space-y-1 text-gray-400">
+                    <li>Data is stored in MongoDB hosted on secure cloud infrastructure</li>
+                    <li>All data is transmitted over HTTPS (TLS 1.2+)</li>
+                    <li>Authentication is handled by Clerk with industry-standard security</li>
+                    <li>Payment processing is handled by Stripe (PCI DSS compliant)</li>
+                    <li>We do not sell, rent, or share your data with third parties for marketing purposes</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">5. Third-Party Services</h2>
+                <p>We use the following third-party services that may process data:</p>
+                <ul class="list-disc list-inside mt-2 space-y-1 text-gray-400">
+                    <li><strong class="text-white">PostHog</strong> &mdash; product analytics (privacy-friendly, no cross-site tracking)</li>
+                    <li><strong class="text-white">Clerk</strong> &mdash; authentication and user management</li>
+                    <li><strong class="text-white">Stripe</strong> &mdash; payment processing</li>
+                    <li><strong class="text-white">OpenRouter</strong> &mdash; AI model inference for variant generation (page content only, no visitor data)</li>
+                    <li><strong class="text-white">Digital Ocean</strong> &mdash; application hosting</li>
+                    <li><strong class="text-white">Cloudflare</strong> &mdash; CDN and DNS</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">6. Your Rights (GDPR / CCPA)</h2>
+                <p>You have the right to:</p>
+                <ul class="list-disc list-inside mt-2 space-y-1 text-gray-400">
+                    <li>Access the personal data we hold about you</li>
+                    <li>Request correction or deletion of your data</li>
+                    <li>Export your data in a portable format</li>
+                    <li>Object to processing of your data</li>
+                    <li>Withdraw consent at any time</li>
+                </ul>
+                <p class="mt-2">To exercise any of these rights, email <a href="mailto:privacy@endlesstesting.ai" class="text-brand-400 hover:underline">privacy@endlesstesting.ai</a>.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">7. Data Retention</h2>
+                <ul class="list-disc list-inside space-y-1 text-gray-400">
+                    <li>Account data is retained while your account is active</li>
+                    <li>Analytics events (SDK data) are retained for 12 months</li>
+                    <li>Upon account deletion, all associated data is removed within 30 days</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">8. Cookies</h2>
+                <p>Our marketing site uses PostHog which may store a cookie or localStorage entry for analytics session tracking. The SDK installed on your site does not set cookies &mdash; it uses localStorage only.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">9. Changes to This Policy</h2>
+                <p>We may update this policy from time to time. Changes will be posted on this page with an updated date. Continued use of the service after changes constitutes acceptance.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold text-white mb-3">10. Contact</h2>
+                <p>For privacy-related questions, contact us at <a href="mailto:privacy@endlesstesting.ai" class="text-brand-400 hover:underline">privacy@endlesstesting.ai</a>.</p>
+            </section>
+
+        </div>
+    </main>
+
+    <footer class="border-t border-white/5 py-8 text-center text-gray-600 text-sm">
+        <p>&copy; 2026 endlesstesting.ai &middot; <a href="/privacy.html" class="hover:text-white">Privacy</a> &middot; <a href="/terms.html" class="hover:text-white">Terms</a></p>
+    </footer>
+
+</body>
+</html>
