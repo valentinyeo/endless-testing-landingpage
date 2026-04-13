@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ad Creatives — Endless Testing</title>
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: #050505;
+  color: #fff;
+  min-height: 100vh;
+  padding: 60px 24px;
+  background-image:
+    radial-gradient(circle at 15% 20%, rgba(34, 197, 94, 0.08), transparent 30%),
+    radial-gradient(circle at 85% 80%, rgba(59, 130, 246, 0.06), transparent 30%);
+}
+.container { max-width: 1400px; margin: 0 auto; }
+header { text-align: center; margin-bottom: 60px; }
+h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 48px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  letter-spacing: -1px;
+}
+h1 .highlight { color: #4ade80; }
+.subtitle { color: rgba(255,255,255,0.6); font-size: 18px; }
+.section-header {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 48px 0 24px;
+  color: rgba(255,255,255,0.9);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 12px;
+}
+.section-header .count {
+  color: #4ade80;
+  font-size: 16px;
+  font-weight: 500;
+  margin-left: 8px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+.ad-card {
+  background: rgba(23, 23, 23, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.ad-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(74, 222, 128, 0.4);
+}
+.ad-image {
+  width: 100%;
+  aspect-ratio: 1;
+  display: block;
+  background: #000;
+  object-fit: cover;
+}
+.ad-info { padding: 16px 20px; }
+.ad-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.ad-concept {
+  font-size: 13px;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+.ad-actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px 16px;
+}
+.btn {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: all 0.15s;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+.btn-primary {
+  background: #4ade80;
+  color: #050505;
+}
+.btn-primary:hover { background: #22c55e; }
+.btn-secondary {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.14); }
+.placeholder {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0a0a0a, #1a1a1a);
+  color: rgba(255,255,255,0.3);
+  font-size: 14px;
+  border: 1px dashed rgba(255,255,255,0.1);
+}
+footer {
+  text-align: center;
+  margin-top: 80px;
+  padding-top: 40px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.4);
+  font-size: 13px;
+}
+footer a { color: #4ade80; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Ad Creatives <span class="highlight">Gallery</span></h1>
+    <p class="subtitle">AI-generated Meta ad concepts for endlesstesting.ai · 1080×1080</p>
+  </header>
+
+  <h2 class="section-header">Round 2 — AI Creates A/B Tests<span class="count">(new concepts)</span></h2>
+  <div class="grid">
+    <div class="ad-card">
+      <img class="ad-image" src="/images/ad-image-6.png" alt="AI writes tests" onerror="this.outerHTML='<div class=\'placeholder\'>Generating…</div>'">
+      <div class="ad-info">
+        <div class="ad-title">Ad 6 — AI Writes Tests</div>
+        <div class="ad-concept">Dashboard with AI typing test hypotheses in real-time. Headline: "AI writes your A/B tests."</div>
+      </div>
+      <div class="ad-actions">
+        <a class="btn btn-primary" href="/images/ad-image-6.png" download>Download</a>
+        <a class="btn btn-secondary" href="/images/ad-image-6.png" target="_blank">Full size</a>
+      </div>
+    </div>
+
+    <div class="ad-card">
+      <img class="ad-image" src="/images/ad-image-7.png" alt="While you slept" onerror="this.outerHTML='<div class=\'placeholder\'>Generating…</div>'">
+      <div class="ad-info">
+        <div class="ad-title">Ad 7 — While You Slept</div>
+        <div class="ad-concept">Person sleeping + timeline of 5 tests shipped overnight with uplift numbers. "While you slept, AI shipped 5 tests."</div>
+      </div>
+      <div class="ad-actions">
+        <a class="btn btn-primary" href="/images/ad-image-7.png" download>Download</a>
+        <a class="btn btn-secondary" href="/images/ad-image-7.png" target="_blank">Full size</a>
+      </div>
+    </div>
+
+    <div class="ad-card">
+      <img class="ad-image" src="/images/ad-image-8.png" alt="Chat UI" onerror="this.outerHTML='<div class=\'placeholder\'>Generating…</div>'">
+      <div class="ad-info">
+        <div class="ad-title">Ad 8 — Chat with AI</div>
+        <div class="ad-concept">Chat UI: user says "optimize my homepage", AI replies with 5 tests created. Conversational, direct.</div>
+      </div>
+      <div class="ad-actions">
+        <a class="btn btn-primary" href="/images/ad-image-8.png" download>Download</a>
+        <a class="btn btn-secondary" href="/images/ad-image-8.png" target="_blank">Full size</a>
+      </div>
+    </div>
+
+    <div class="ad-card">
+      <img class="ad-image" src="/images/ad-image-9.png" alt="Blank vs variants" onerror="this.outerHTML='<div class=\'placeholder\'>Generating…</div>'">
+      <div class="ad-info">
+        <div class="ad-title">Ad 9 — 5 Variants Generated</div>
+        <div class="ad-concept">Split: blank page vs same page with 5 highlighted AI-generated variations. "One page. 5 AI-generated tests."</div>
+      </div>
+      <div class="ad-actions">
+        <a class="btn btn-primary" href="/images/ad-image-9.png" download>Download</a>
+        <a class="btn btn-secondary" href="/images/ad-image-9.png" target="_blank">Full size</a>
+      </div>
+    </div>
+
+    <div class="ad-card">
+      <img class="ad-image" src="/images/ad-image-10.png" alt="47x more tests" onerror="this.outerHTML='<div class=\'placeholder\'>Generating…</div>'">
+      <div class="ad-info">
+        <div class="ad-title">Ad 10 — 47x More Tests</div>
+        <div class="ad-concept">Two timelines: manual (1 test) vs AI (47 tests). Same time. "47x more tests. Same time."</div>
+      </div>
+      <div class="ad-actions">
+        <a class="btn btn-primary" href="/images/ad-image-10.png" download>Download</a>
+        <a class="btn btn-secondary" href="/images/ad-image-10.png" target="_blank">Full size</a>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section-header">Round 1 — Original Brand<span class="count">(more abstract)</span></h2>
+  <div class="grid">
+    <div class="ad-card">
+      <img class="ad-image" src="/images/ad-image-1.png" alt="Infinity minimal">
+      <div class="ad-info">
+        <div class="ad-title">Ad 1 — Infinity</div>
+        <div class="ad-concept">Minimal infinity symbol. "AI A/B Testing"</div>
+      </div>
+      <div class="ad-actions">
+        <a class="btn btn-primary" href="/images/ad-image-1.png" download>Download</a>
+        <a class="btn btn-secondary" href="/images/ad-image-1.png" target="_blank">Full size</a>
+      </div>
+    </div>
+
+    <div class="ad-card">
+      <img class="ad-image" src="/images/ad-image-2.png" alt="AI brain">
+      <div class="ad-info">
+        <div class="ad-title">Ad 2 — AI Brain</div>
+        <div class="ad-concept">Circuit brain → upward arrows. "Your Tests. Always Running."</div>
+      </div>
+      <div class="ad-actions">
+        <a class="btn btn-primary" href="/images/ad-image-2.png" download>Download</a>
+        <a class="btn btn-secondary" href="/images/ad-image-2.png" target="_blank">Full size</a>
+      </div>
+    </div>
+
+    <div class="ad-card">
+      <img class="ad-image" src="/images/ad-image-3.png" alt="Stop testing manually">
+      <div class="ad-info">
+        <div class="ad-title">Ad 3 — Stop Testing Manually</div>
+        <div class="ad-concept">Static page vs growth arrows. "Stop Testing Manually → Let AI Do It"</div>
+      </div>
+      <div class="ad-actions">
+        <a class="btn btn-primary" href="/images/ad-image-3.png" download>Download</a>
+        <a class="btn btn-secondary" href="/images/ad-image-3.png" target="_blank">Full size</a>
+      </div>
+    </div>
+
+    <div class="ad-card">
+      <img class="ad-image" src="/images/ad-image-4.png" alt="AI picks winner">
+      <div class="ad-info">
+        <div class="ad-title">Ad 4 — AI Picks Winner</div>
+        <div class="ad-concept">Browser variants, winning one glows. "AI picks the winner. Automatically."</div>
+      </div>
+      <div class="ad-actions">
+        <a class="btn btn-primary" href="/images/ad-image-4.png" download>Download</a>
+        <a class="btn btn-secondary" href="/images/ad-image-4.png" target="_blank">Full size</a>
+      </div>
+    </div>
+
+    <div class="ad-card">
+      <img class="ad-image" src="/images/ad-image-5.png" alt="Set up once">
+      <div class="ad-info">
+        <div class="ad-title">Ad 5 — Premium Infinity</div>
+        <div class="ad-concept">Premium infinity symbol. "Set up once. Optimize forever."</div>
+      </div>
+      <div class="ad-actions">
+        <a class="btn btn-primary" href="/images/ad-image-5.png" download>Download</a>
+        <a class="btn btn-secondary" href="/images/ad-image-5.png" target="_blank">Full size</a>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Generated via OpenRouter · GPT-5-image-mini</p>
+    <p style="margin-top: 8px;"><a href="/">← Back to endlesstesting.ai</a></p>
+  </footer>
+</div>
+</body>
+</html>
