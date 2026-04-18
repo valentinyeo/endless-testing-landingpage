@@ -340,9 +340,17 @@
     <!-- Pricing Section -->
     <section class="relative z-10 py-16 sm:py-24 bg-dark-900 border-t border-white/5" id="pricing">
         <div class="max-w-7xl mx-auto px-4 sm:px-6">
-            <div class="text-center mb-16">
+            <div class="text-center mb-10">
                 <h2 class="font-display text-4xl font-bold mb-4">One price. One promise.</h2>
                 <p class="text-gray-400 max-w-xl mx-auto">7-day free trial. Card required. Cancel anytime before the trial ends and you're not charged.</p>
+            </div>
+
+            <!-- Billing period toggle -->
+            <div class="flex justify-center mb-10" role="tablist" aria-label="Billing period">
+                <div class="inline-flex p-1 rounded-full bg-white/5 border border-white/10">
+                    <button type="button" role="tab" aria-selected="true" id="billing-monthly" class="px-5 py-2 rounded-full text-sm font-medium transition-colors bg-brand-500 text-black">Monthly</button>
+                    <button type="button" role="tab" aria-selected="false" id="billing-annual" class="px-5 py-2 rounded-full text-sm font-medium transition-colors text-gray-300 hover:text-white">Annual <span class="ml-1 text-xs text-brand-400">save $600</span></button>
+                </div>
             </div>
 
             <div class="max-w-md mx-auto">
@@ -351,10 +359,10 @@
                     <div class="mb-6">
                         <h3 class="text-brand-400 uppercase tracking-widest text-xs font-bold mb-2">Endless Testing</h3>
                         <div class="flex items-baseline gap-1">
-                            <span class="text-6xl font-display font-black text-white">$299</span>
+                            <span id="price-amount" class="text-6xl font-display font-black text-white">$299</span>
                             <span class="text-lg text-brand-200/50 font-normal">/mo</span>
                         </div>
-                        <p class="mt-2 text-sm text-brand-100/70">or <span class="font-semibold text-white">$249/mo</span> billed annually — save $600/yr</p>
+                        <p id="price-subcopy" class="mt-2 text-sm text-brand-100/70">or <span class="font-semibold text-white">$249/mo</span> billed annually — save $600/yr</p>
                     </div>
 
                     <div class="mb-8 pb-8 border-b border-white/10">
@@ -402,6 +410,33 @@
   };
 </script>
 <script src="https://api.endlesstesting.ai/api/sdk.js" async></script>
+
+<script>
+  (function () {
+    var monthly = document.getElementById('billing-monthly');
+    var annual = document.getElementById('billing-annual');
+    var amount = document.getElementById('price-amount');
+    var subcopy = document.getElementById('price-subcopy');
+    if (!monthly || !annual || !amount || !subcopy) return;
+    var ACTIVE = 'bg-brand-500 text-black';
+    var INACTIVE = 'text-gray-300 hover:text-white';
+    function set(mode) {
+      var isAnnual = mode === 'annual';
+      amount.textContent = isAnnual ? '$249' : '$299';
+      subcopy.innerHTML = isAnnual
+        ? 'Billed annually at <span class="font-semibold text-white">$2,988/yr</span> — save $600/yr'
+        : 'or <span class="font-semibold text-white">$249/mo</span> billed annually — save $600/yr';
+      annual.setAttribute('aria-selected', String(isAnnual));
+      monthly.setAttribute('aria-selected', String(!isAnnual));
+      annual.className = 'px-5 py-2 rounded-full text-sm font-medium transition-colors ' + (isAnnual ? ACTIVE : INACTIVE) + (isAnnual ? '' : '');
+      monthly.className = 'px-5 py-2 rounded-full text-sm font-medium transition-colors ' + (isAnnual ? INACTIVE : ACTIVE);
+      if (isAnnual) annual.innerHTML = 'Annual <span class="ml-1 text-xs text-black/70">save $600</span>';
+      else annual.innerHTML = 'Annual <span class="ml-1 text-xs text-brand-400">save $600</span>';
+    }
+    monthly.addEventListener('click', function () { set('monthly'); });
+    annual.addEventListener('click', function () { set('annual'); });
+  })();
+</script>
 
 </body>
 </html>
