@@ -101,21 +101,33 @@ function assertNoOpenRouterKey(source) {
   if (asksForOpenRouterKey(source)) assert.fail('page asks for an OpenRouter key');
 }
 
-function statusSample(source) {
+function terminalCode(source) {
   const terminal = source.match(/id="terminal"[\s\S]*?<code>([\s\S]*?)<\/code>/);
   assert.ok(terminal, 'terminal sample missing');
-  const text = terminal[1].replace(/<[^>]+>/g, '');
+  return terminal[1].replace(/<([a-zA-Z][\w:-]*)\b[^>]*\shidden\b[^>]*>[\s\S]*?<\/\1>/g, '');
+}
+
+function statusSample(source) {
+  const text = terminalCode(source).replace(/<[^>]+>/g, '');
   const marker = '$ et status';
   const at = text.indexOf(marker);
   assert.notEqual(at, -1, 'et status command missing from terminal');
-  return text.slice(at + marker.length);
+  const after = text.slice(at + marker.length);
+  const newline = after.indexOf('\n');
+  assert.notEqual(newline, -1, 'sample has no winner line');
+  return after.slice(newline + 1);
+}
+
+function namesWinner(line) {
+  const named = line.match(/^winner:\s+(\S(?:.*\S)?)$/i);
+  if (!named) return false;
+  const name = named[1].trim().toLowerCase();
+  if (/^(null|none|undefined|nil|n\/a|na|false|pending|unknown|tbd|no winner|no-winner|-+|\?+)$/.test(name)) return false;
+  return true;
 }
 
 function assertStatusNamesWinner(source) {
-  const line = statusSample(source).split('\n').map((item) => item.trim()).find((item) => {
-    const named = item.match(/^winner:\s+(\S(?:.*\S)?)$/i);
-    return Boolean(named) && named[1].toLowerCase() !== 'null';
-  });
+  const line = statusSample(source).split('\n').map((item) => item.trim()).find(namesWinner);
   assert.ok(line, 'sample has no winner line');
 }
 
@@ -178,6 +190,33 @@ test('the et status sample names a winner', () => {
   assert.throws(() => assertStatusNamesWinner(unnamed), /sample has no winner line/);
   const blank = html.replace('winner: Clear price', '');
   assert.throws(() => assertStatusNamesWinner(blank), /sample has no winner line/);
+
+  for (const fake of ['null', 'none', 'undefined', 'nil', 'n/a', 'na', 'false', 'pending', 'unknown', 'TBD', 'no winner', 'no-winner', '-', '?']) {
+    const sample = html.replace('winner: Clear price', `winner: ${fake}`);
+    assert.notEqual(sample, html, fake);
+    assert.throws(() => assertStatusNamesWinner(sample), /sample has no winner line/, fake);
+  }
+
+  const sameLine = html.replace('\n<span class="dim">winner: Clear price</span>', ' winner: Clear price');
+  assert.notEqual(sameLine, html);
+  assert.throws(() => assertStatusNamesWinner(sameLine), /sample has no winner line/);
+
+  const before = html
+    .replace('<span class="dim">winner: Clear price</span>', '')
+    .replace('$ et status', 'winner: Clear price\n$ et status');
+  assert.throws(() => assertStatusNamesWinner(before), /sample has no winner line/);
+
+  const outside = html
+    .replace('<span class="dim">winner: Clear price</span>', '')
+    .replace('</body>', '<p>winner: Clear price</p></body>');
+  assert.throws(() => assertStatusNamesWinner(outside), /sample has no winner line/);
+
+  const hidden = html.replace('<span class="dim">', '<span class="dim" hidden>');
+  assert.notEqual(hidden, html);
+  assert.throws(() => assertStatusNamesWinner(hidden), /sample has no winner line/);
+
+  const comment = html.replace('<span class="dim">winner: Clear price</span>', '<!-- winner: Clear price -->');
+  assert.throws(() => assertStatusNamesWinner(comment), /sample has no winner line/);
 });
 
 test('you connect Claude, Codex, or ChatGPT and the product writes the next lines', () => {
@@ -424,6 +463,30 @@ describe('landing layout', () => {
 
     const commands = await page.locator('#terminal').innerText();
     assert.match(commands, /\$ et login\n\$ et site add\n\$ et round start\n\$ et status\nwinner: Clear price/);
+
+    const winner = await page.evaluate(() => {
+      const el = document.querySelector('.terminal .dim');
+      const style = getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      const term = document.querySelector('.terminal').getBoundingClientRect();
+      return {
+        text: el.textContent.trim(),
+        opacity: Number(style.opacity),
+        display: style.display,
+        visibility: style.visibility,
+        fontSize: parseFloat(style.fontSize),
+        left: rect.left,
+        right: rect.right,
+        termLeft: term.left,
+        termRight: term.right,
+      };
+    });
+    assert.equal(winner.text, 'winner: Clear price');
+    assert.equal(winner.display, 'inline');
+    assert.equal(winner.visibility, 'visible');
+    assert.ok(winner.opacity >= 0.99, `winner opacity ${winner.opacity}`);
+    assert.ok(winner.fontSize >= 12, `winner font size ${winner.fontSize}`);
+    assert.ok(winner.left >= winner.termLeft - 1 && winner.right <= winner.termRight + 1, 'winner line is clipped');
   });
 
   test('trial button text stays on the green fill', async () => {
@@ -478,6 +541,7 @@ describe('landing layout', () => {
         return {
           mark: paint(document.querySelector('.logo span')),
           note: paint(document.getElementById('dogfood-note')),
+          winner: paint(document.querySelector('.terminal .dim')),
         };
       });
       for (const [name, colors] of Object.entries(sample)) {
