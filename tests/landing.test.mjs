@@ -89,8 +89,12 @@ function primaryLinks(source) {
 }
 
 function asksForOpenRouterKey(source) {
-  return /openrouter[\s\S]{0,48}(api[\s_-]*)?key/i.test(source)
-    || /openrouter_api_key/i.test(source);
+  if (/openrouter[\s_-]*api[\s_-]*keys?\b/i.test(source)) return true;
+  if (/openrouter[\s_-]*keys?\b/i.test(source)) return true;
+  const span = 200;
+  if (new RegExp(`openrouter[\\s\\S]{0,${span}}\\bkeys?\\b`, 'i').test(source)) return true;
+  if (new RegExp(`\\bkeys?\\b[\\s\\S]{0,${span}}openrouter`, 'i').test(source)) return true;
+  return false;
 }
 
 function assertNoOpenRouterKey(source) {
@@ -135,7 +139,16 @@ test('the page does not ask for an OpenRouter key', () => {
   assertNoOpenRouterKey(html);
   assert.throws(() => assertNoOpenRouterKey('Paste your OpenRouter key'), /OpenRouter key/);
   assert.throws(() => assertNoOpenRouterKey('Add your OpenRouter API key'), /OpenRouter key/);
+  assert.throws(() => assertNoOpenRouterKey('Paste your API key from OpenRouter'), /OpenRouter key/);
+  assert.throws(() => assertNoOpenRouterKey('Enter your key for OpenRouter'), /OpenRouter key/);
+  assert.throws(() => assertNoOpenRouterKey('API key (OpenRouter)'), /OpenRouter key/);
+  assert.throws(() => assertNoOpenRouterKey('Go to OpenRouter, create an account, open settings, and copy the API key.'), /OpenRouter key/);
+  assert.throws(() => assertNoOpenRouterKey('OPENROUTER_API_KEY'), /OpenRouter key/);
+  assert.throws(() => assertNoOpenRouterKey('OPENROUTER_KEY'), /OpenRouter key/);
   assertNoOpenRouterKey('Traffic is not sent to OpenRouter.');
+  assertNoOpenRouterKey('OpenRouter keyboard');
+  const far = `Traffic is not sent to OpenRouter.${' '.repeat(400)}if (event.key === 'Escape') closeMenu();`;
+  assertNoOpenRouterKey(far);
 });
 
 test('you connect Claude, Codex, or ChatGPT and the product writes the next lines', () => {
@@ -143,6 +156,12 @@ test('you connect Claude, Codex, or ChatGPT and the product writes the next line
   const stripped = html.replace(/<section id="lines">[\s\S]*?<\/section>/, '');
   assert.notEqual(stripped, html);
   assert.throws(() => assertLinesSection(stripped), /lines section missing/);
+  const noConnect = html.replace('You connect Claude, Codex, or ChatGPT.', 'You bring a model.');
+  assert.notEqual(noConnect, html);
+  assert.throws(() => assertLinesSection(noConnect), /Claude, Codex, or ChatGPT/);
+  const noLines = html.replace('Endless Testing writes the next lines.', 'Endless Testing stores the round.');
+  assert.notEqual(noLines, html);
+  assert.throws(() => assertLinesSection(noLines), /writes the next lines/);
 });
 
 test('landing copy has the required facts and no em dashes', () => {
