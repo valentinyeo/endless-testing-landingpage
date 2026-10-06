@@ -29,6 +29,7 @@
             --on-accent: #ffffff;
             --nav: rgba(243, 244, 241, 0.92);
             --code: #121612;
+            --code-edge: transparent;
             --code-fg: #e7f0e8;
             --code-dim: #8aa192;
             --code-prompt: #7dce96;
@@ -47,7 +48,8 @@
                 --accent-soft: rgba(74, 222, 128, 0.12);
                 --on-accent: #052e16;
                 --nav: rgba(7, 8, 7, 0.9);
-                --code: #0c0f0c;
+                --code: #1a211c;
+                --code-edge: rgba(255, 255, 255, 0.2);
                 --code-fg: #e7f0e8;
                 --code-dim: #8aa192;
                 --code-prompt: #4ade80;
@@ -56,7 +58,7 @@
         }
         * { box-sizing: border-box; }
         [hidden] { display: none !important; }
-        html { scroll-behavior: smooth; }
+        html { scroll-behavior: smooth; scroll-padding-top: 4.5rem; }
         body {
             margin: 0;
             background: var(--bg);
@@ -78,20 +80,10 @@
             backdrop-filter: blur(12px);
         }
         .nav-bar { min-height: 4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-        .logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; font-family: "Space Grotesk", sans-serif; font-weight: 700; }
-        .logo-mark {
-            width: 2rem;
-            height: 2rem;
-            border-radius: 0.6rem;
-            display: grid;
-            place-items: center;
-            background: var(--accent-soft);
-            color: var(--accent);
-            font-size: 1.1rem;
-        }
+        .logo { text-decoration: none; font-family: "Space Grotesk", sans-serif; font-weight: 700; }
         .logo span { color: var(--faint); font-weight: 500; }
         .nav-links { display: none; align-items: center; gap: 1.25rem; color: var(--muted); font-size: 0.92rem; font-weight: 500; }
-        .nav-links a { text-decoration: none; }
+        .nav-links a { text-decoration: none; white-space: nowrap; }
         .nav-links a:hover { color: var(--fg); }
         .nav-toggle {
             border: 1px solid var(--line);
@@ -142,6 +134,7 @@
             border-radius: 1rem;
             padding: 1rem 1.1rem 1.15rem;
             box-shadow: var(--shadow);
+            border: 1px solid var(--code-edge);
             overflow: hidden;
             font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
             font-size: 0.95rem;
@@ -199,13 +192,15 @@
         footer a { color: var(--muted); }
         #dogfood-note { margin-top: 0.4rem; }
         @media (min-width: 768px) {
-            .nav-links { display: flex; }
-            .nav-toggle, .nav-panel { display: none; }
             .hero { padding: 5rem 0 3rem; }
             .hero-grid { grid-template-columns: 1.05fr 0.95fr; }
             .steps { grid-template-columns: repeat(4, 1fr); }
             .cards { grid-template-columns: repeat(3, 1fr); }
             .split { grid-template-columns: 1fr 1fr; }
+        }
+        @media (min-width: 900px) {
+            .nav-links { display: flex; }
+            .nav-toggle, .nav-panel { display: none; }
         }
     </style>
 </head>
@@ -391,12 +386,38 @@
   (function () {
     var toggle = document.getElementById('nav-toggle');
     var panel = document.getElementById('nav-panel');
+    function closeMenu() {
+      if (!panel || !toggle) return;
+      panel.setAttribute('hidden', '');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
     if (toggle && panel) {
       toggle.addEventListener('click', function () {
         var open = panel.hasAttribute('hidden');
         if (open) panel.removeAttribute('hidden');
         else panel.setAttribute('hidden', '');
         toggle.setAttribute('aria-expanded', String(open));
+      });
+      panel.addEventListener('click', function (event) {
+        var link = event.target.closest('a');
+        if (!link) return;
+        var href = link.getAttribute('href') || '';
+        if (href.charAt(0) !== '#') {
+          closeMenu();
+          return;
+        }
+        var target = document.getElementById(href.slice(1));
+        if (!target) return;
+        event.preventDefault();
+        closeMenu();
+        target.scrollIntoView();
+        history.pushState(null, '', href);
+      });
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') closeMenu();
+      });
+      window.matchMedia('(min-width: 900px)').addEventListener('change', function (event) {
+        if (event.matches) closeMenu();
       });
     }
     var monthly = document.getElementById('billing-monthly');
