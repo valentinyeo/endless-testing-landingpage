@@ -5,6 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>endlesstesting.ai. A/B testing for AI generalists</title>
     <meta name="description" content="Run A/B tests on your landing page from Claude, Codex, or ChatGPT through the CLI, MCP, or API.">
+    <link rel="canonical" href="https://endlesstesting.ai/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="endlesstesting.ai">
+    <meta property="og:title" content="endlesstesting.ai. A/B testing for AI generalists">
+    <meta property="og:description" content="Run A/B tests on your landing page from Claude, Codex, or ChatGPT through the CLI, MCP, or API.">
+    <meta property="og:url" content="https://endlesstesting.ai/">
+    <meta property="og:image" content="https://endlesstesting.ai/og.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="endlesstesting.ai. A/B testing for AI generalists.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="endlesstesting.ai. A/B testing for AI generalists">
+    <meta name="twitter:description" content="Run A/B tests on your landing page from Claude, Codex, or ChatGPT through the CLI, MCP, or API.">
+    <meta name="twitter:image" content="https://endlesstesting.ai/og.png">
+    <meta name="twitter:image:alt" content="endlesstesting.ai. A/B testing for AI generalists.">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Endless Testing",
+      "url": "https://endlesstesting.ai/",
+      "description": "Run A/B tests on your landing page from Claude, Codex, or ChatGPT through the CLI, MCP, or API.",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "299",
+        "priceCurrency": "USD",
+        "description": "299 USD per month, or 249 USD per month billed annually. 7-day free trial, card required."
+      }
+    }
+    </script>
     <script>
         !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
         posthog.init('phc_sNBq426e7JGhRuovpk6Jcrn4ShGz9RiYfPHaiz6ssyud', {
@@ -242,7 +274,7 @@
                         <a class="btn btn-quiet" href="https://docs.endlesstesting.ai">Docs</a>
                     </div>
                 </div>
-                <div id="terminal" class="terminal" aria-label="Terminal flow">
+                <div id="terminal" class="terminal" role="region" aria-label="Terminal flow">
                     <div class="terminal-bar" aria-hidden="true"><i></i><i></i><i></i></div>
                     <code><span class="prompt">$</span> et login
 <span class="prompt">$</span> et site add
@@ -333,11 +365,11 @@
                 </div>
                 <div class="billing" role="tablist" aria-label="Billing period">
                     <div class="billing-switch">
-                        <button type="button" role="tab" aria-selected="true" id="billing-monthly">Monthly</button>
-                        <button type="button" role="tab" aria-selected="false" id="billing-annual">Annual, save $600</button>
+                        <button type="button" role="tab" aria-selected="true" id="billing-monthly" aria-controls="price-panel">Monthly</button>
+                        <button type="button" role="tab" aria-selected="false" id="billing-annual" aria-controls="price-panel">Annual, save $600</button>
                     </div>
                 </div>
-                <article class="card price-card">
+                <div class="card price-card" id="price-panel" role="tabpanel" aria-labelledby="billing-monthly">
                     <p class="price-kicker">Endless Testing</p>
                     <div class="price">
                         <strong id="price-amount">$299</strong>
@@ -354,7 +386,7 @@
                     </ul>
                     <a class="btn btn-primary" href="https://dash.endlesstesting.ai/">Start 7-day trial</a>
                     <p class="fine">Billed via Stripe. Cancel in one click.</p>
-                </article>
+                </div>
                 <article class="card oss">
                     <div>
                         <h3>Open source CLI. Source-available backend.</h3>
@@ -433,6 +465,8 @@
         : 'or <strong>$249/mo</strong> billed annually. Save $600/yr.';
       annual.setAttribute('aria-selected', String(isAnnual));
       monthly.setAttribute('aria-selected', String(!isAnnual));
+      var panel = document.getElementById('price-panel');
+      if (panel) panel.setAttribute('aria-labelledby', isAnnual ? 'billing-annual' : 'billing-monthly');
     }
     monthly.addEventListener('click', function () { set('monthly'); });
     annual.addEventListener('click', function () { set('annual'); });

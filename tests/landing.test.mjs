@@ -85,6 +85,28 @@ test('landing copy has the required facts and no em dashes', () => {
   assert.equal((299 - 249) * 12, 600);
 });
 
+test('agent files and share metadata are on the page', () => {
+  assert.match(html, /rel="canonical" href="https:\/\/endlesstesting\.ai\/"/);
+  assert.match(html, /property="og:image" content="https:\/\/endlesstesting\.ai\/og\.png"/);
+  assert.match(html, /name="twitter:card" content="summary_large_image"/);
+  assert.match(html, /"@type": "SoftwareApplication"/);
+  const llms = fs.readFileSync(path.join(root, 'llms.txt'), 'utf8');
+  const full = fs.readFileSync(path.join(root, 'llms-full.txt'), 'utf8');
+  for (const text of [llms, full]) {
+    assert.equal(text.includes('\u2014'), false);
+    assert.match(text, /et login/);
+    assert.match(text, /et mcp/);
+  }
+  const robots = fs.readFileSync(path.join(root, 'robots.txt'), 'utf8');
+  const sitemap = fs.readFileSync(path.join(root, 'sitemap.xml'), 'utf8');
+  assert.match(robots, /Sitemap: https:\/\/endlesstesting\.ai\/sitemap\.xml/);
+  assert.match(sitemap, /<loc>https:\/\/endlesstesting\.ai\/<\/loc>/);
+  assert.equal(sitemap.includes('ads.html'), false);
+  const png = fs.readFileSync(path.join(root, 'og.png'));
+  assert.equal(png.readUInt32BE(16), 1200);
+  assert.equal(png.readUInt32BE(20), 630);
+});
+
 describe('landing layout', () => {
   let server;
   let browser;

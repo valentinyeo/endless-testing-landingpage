@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#070807"/>
+  <rect width="14" height="630" fill="#4ade80"/>
+  <text x="72" y="210" fill="#4ade80" font-family="DejaVu Sans, Liberation Sans, sans-serif" font-size="28" font-weight="700" letter-spacing="3">AI GENERALISTS</text>
+  <text x="72" y="310" fill="#f2f5f2" font-family="DejaVu Sans, Liberation Sans, sans-serif" font-size="68" font-weight="700">A/B testing for</text>
+  <text x="72" y="392" fill="#f2f5f2" font-family="DejaVu Sans, Liberation Sans, sans-serif" font-size="68" font-weight="700">AI generalists</text>
+  <text x="72" y="480" fill="#b4bcb5" font-family="DejaVu Sans, Liberation Sans, sans-serif" font-size="30">CLI, MCP, and API. Claude, Codex, or ChatGPT.</text>
+  <text x="72" y="560" fill="#8b948c" font-family="DejaVu Sans, Liberation Sans, sans-serif" font-size="26">endlesstesting.ai</text>
+</svg>

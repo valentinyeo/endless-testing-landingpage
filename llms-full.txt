@@ -1,0 +1,129 @@
+# Endless Testing
+
+> A/B testing for AI generalists. Run A/B tests on a landing page from Claude, Codex, or ChatGPT through the CLI, MCP, or API.
+
+Endless Testing runs rounds on a landing page. When a round ends, the winner stays live. The next round starts itself. The dashboard shows the current round and its results. The kill switch stops the round.
+
+CLI, MCP, and API are equal. Claude, Codex, and ChatGPT can use any of them.
+
+Use the `et` commands in this file. Older pages on docs.endlesstesting.ai still describe the previous npm CLI (`endlesstesting auth`, `endlesstesting run`). Those commands are not this CLI.
+
+## Pricing
+
+- $299/mo, or $249/mo billed annually ($2,988/yr, save $600/yr).
+- 7-day free trial. Card required. Cancel before the trial ends and you are not charged.
+- 5 concurrent tests.
+- Invite your team.
+- Start at https://dash.endlesstesting.ai/
+- Billed via Stripe. Cancel in one click.
+
+## How a round works
+
+1. `et login` signs you in. `et site add` adds the landing page.
+2. `et round start` opens the round.
+3. When the round ends, the winner stays live.
+4. The next round starts itself. `et status` reports the round.
+
+## CLI
+
+The binary is named `et`. Output is compact JSON. `ET_API` overrides the API base. The default base is https://api.endlesstesting.ai. `ET_TOKEN` overrides the token file. The token file is `~/.config/endlesstesting/token`.
+
+`et login --email you@example.com` sends the same email code as the dashboard. `et login --code <code>` exchanges that code for an account token and writes the token file.
+
+Add `--text` to print indented JSON. On `et goal set`, `--text` is the button label, not the pretty-print flag.
+
+```
+et login --email <email>
+et login --code <code>
+et logout
+et whoami
+et sites
+et site add <url>
+et snippet <site>
+et check <site>
+et goals <site>
+et goal set <site> --text <button>
+et brand <site>
+et brand set <site> --field <k=v>
+et brand autofill <site>
+et round start <site> [--url <page>]
+et status <site>
+et results <site>
+et feed <site>
+et pause <test>
+et resume <test>
+et reject <variant>
+et kill <site> on|off
+et mcp
+et help
+```
+
+`et help` prints this list. `et kill <site> on` turns the kill switch on. `et kill <site> off` turns it off.
+
+## MCP setup
+
+`et mcp` speaks MCP over stdio. The tools call the same commands as the CLI.
+
+Claude Code:
+
+```
+claude mcp add endlesstesting -- et mcp
+```
+
+Codex, in `~/.codex/config.toml`:
+
+```
+[mcp_servers.endlesstesting]
+command = "et"
+args = ["mcp"]
+```
+
+ChatGPT and any other MCP client use the same stdio server: command `et`, args `mcp`.
+
+Do not invent an API key. Sign in with `et login` or the `login` tool. Do not report a winner until `et results` shows one.
+
+## MCP tools
+
+- login: send a sign-in code or exchange it for an account token. Optional email, optional code.
+- logout: revoke the account token and forget it.
+- whoami: show the signed-in account.
+- sites: list sites on the account.
+- site_add: add a site. Requires url.
+- snippet: print the install snippet. Requires site.
+- check: report whether the snippet has been seen. Requires site.
+- goals: show the conversion goal. Requires site.
+- goal_set: set the goal button text. Requires site and text.
+- brand: show brand context. Requires site.
+- brand_set: set one brand field as k=v. Requires site and field.
+- brand_autofill: fill brand context from the site. Requires site.
+- round_start: start a round on a site. Requires site. Optional url.
+- status: show live tests, challengers, and the round. Requires site.
+- results: show finished rounds with winners and lift. Requires site.
+- feed: show what the engine did. Requires site.
+- pause: pause a test. Requires test.
+- resume: resume a test. Requires test.
+- reject: reject a variant. Requires variant.
+- kill: turn the kill switch on or off. Requires site and state (`on` or `off`).
+
+## SDK
+
+Public pages install this snippet. Keep `blockUntilVariants` false.
+
+```
+window.AB_CONFIG = {
+  base: "https://api.endlesstesting.ai",
+  blockUntilVariants: false
+};
+```
+
+Script URL: https://api.endlesstesting.ai/api/sdk.js
+
+## Links
+
+- Landing page: https://endlesstesting.ai/
+- Dashboard: https://dash.endlesstesting.ai/
+- Docs: https://docs.endlesstesting.ai
+- API: https://api.endlesstesting.ai
+- GitHub: https://github.com/valentinyeo/endless-testing
+- Privacy: https://endlesstesting.ai/privacy.html
+- Terms: https://endlesstesting.ai/terms.html
