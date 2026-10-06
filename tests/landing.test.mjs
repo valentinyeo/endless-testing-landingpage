@@ -165,6 +165,32 @@ test('primary links use Start 7-day free trial and reject the shorter label', ()
   assert.throws(() => assertPrimaryTrialGoal(reverted), /shorter trial label/);
 });
 
+const INSTALL_FILES = [
+  'et-x86_64-linux-musl',
+  'et-aarch64-linux-musl',
+  'et-aarch64-macos',
+  'et-x86_64-windows-gnu',
+];
+
+function assertInstallFiles(source) {
+  const block = source.match(/id="terminal"[\s\S]*?<p class="install-files">([\s\S]*?)<\/p>/);
+  assert.ok(block, 'install files missing beside the terminal');
+  const text = block[1].replace(/<[^>]+>/g, '');
+  for (const name of INSTALL_FILES) {
+    if (!text.includes(name)) assert.fail(`install file missing: ${name}`);
+  }
+  assert.match(text, /Each file is the program for that machine\./);
+}
+
+test('the page names the four et install files beside the terminal', () => {
+  assertInstallFiles(html);
+  for (const name of INSTALL_FILES) {
+    const stripped = html.replace(name, 'et-missing');
+    assert.notEqual(stripped, html, name);
+    assert.throws(() => assertInstallFiles(stripped), new RegExp(`install file missing: ${name}`), name);
+  }
+});
+
 test('the page does not ask for an OpenRouter key', () => {
   assertNoOpenRouterKey(html);
   assert.throws(() => assertNoOpenRouterKey('Paste your OpenRouter key'), /OpenRouter key/);
