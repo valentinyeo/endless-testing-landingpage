@@ -106,21 +106,38 @@ test('landing copy has the required facts and no em dashes', () => {
 test('agent files and share metadata are on the page', () => {
   assert.match(html, /rel="canonical" href="https:\/\/endlesstesting\.ai\/"/);
   assert.match(html, /property="og:image" content="https:\/\/endlesstesting\.ai\/og\.png"/);
+  assert.match(html, /property="og:image:width" content="1200"/);
+  assert.match(html, /property="og:image:height" content="630"/);
   assert.match(html, /name="twitter:card" content="summary_large_image"/);
-  assert.match(html, /"@type": "SoftwareApplication"/);
+  assert.match(html, /name="twitter:image" content="https:\/\/endlesstesting\.ai\/og\.png"/);
+  const json = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+  assert.ok(json, 'JSON-LD missing');
+  const data = JSON.parse(json[1]);
+  assert.equal(data['@type'], 'SoftwareApplication');
+  assert.equal(data.url, 'https://endlesstesting.ai/');
+  assert.equal(data.offers.price, '299');
+  assert.equal(data.offers.priceCurrency, 'USD');
   const llms = fs.readFileSync(path.join(root, 'llms.txt'), 'utf8');
   const full = fs.readFileSync(path.join(root, 'llms-full.txt'), 'utf8');
+  const script = 'src="https://api.endlesstesting.ai/api/sdk.js" async data-cfasync="false"';
   for (const text of [llms, full]) {
     assert.equal(text.includes('\u2014'), false);
+    assert.equal(text.includes('\u2013'), false);
     assert.match(text, /et login/);
     assert.match(text, /et mcp/);
+    assert.ok(text.includes('data-cfasync="false"'));
+    assert.match(text, /blockUntilVariants/);
   }
+  assert.match(full, /The SDK blocks rendering when `blockUntilVariants` is omitted/);
+  assert.ok(full.includes(script));
   const robots = fs.readFileSync(path.join(root, 'robots.txt'), 'utf8');
   const sitemap = fs.readFileSync(path.join(root, 'sitemap.xml'), 'utf8');
   assert.match(robots, /Sitemap: https:\/\/endlesstesting\.ai\/sitemap\.xml/);
   assert.match(sitemap, /<loc>https:\/\/endlesstesting\.ai\/<\/loc>/);
   assert.equal(sitemap.includes('ads.html'), false);
   const png = fs.readFileSync(path.join(root, 'og.png'));
+  assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+  assert.equal(png.subarray(12, 16).toString('ascii'), 'IHDR');
   assert.equal(png.readUInt32BE(16), 1200);
   assert.equal(png.readUInt32BE(20), 630);
 });
@@ -261,10 +278,12 @@ describe('landing layout', () => {
     assert.match(await page.locator('#price-subcopy').innerText(), /\$2,988\/yr/);
     assert.match(await page.locator('#price-subcopy').innerText(), /Save \$600\/yr/);
     assert.equal(await page.locator('#billing-annual').getAttribute('aria-selected'), 'true');
+    assert.equal(await page.locator('#price-panel').getAttribute('aria-labelledby'), 'billing-annual');
     await page.click('#billing-monthly');
     assert.equal(await page.locator('#price-amount').innerText(), '$299');
     assert.match(await page.locator('#price-subcopy').innerText(), /\$249\/mo/);
     assert.equal(await page.locator('#billing-monthly').getAttribute('aria-selected'), 'true');
+    assert.equal(await page.locator('#price-panel').getAttribute('aria-labelledby'), 'billing-monthly');
   });
 
   test('dark terminal is a distinct panel and 375 does not scroll sideways', async () => {

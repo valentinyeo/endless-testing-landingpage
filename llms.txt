@@ -11,7 +11,7 @@ Full detail: https://endlesstesting.ai/llms-full.txt
 - [Landing page](https://endlesstesting.ai/): product, pricing, and how a round works.
 - [Dashboard](https://dash.endlesstesting.ai/): sign in, results, and the kill switch. Start the 7-day trial here.
 - [Docs](https://docs.endlesstesting.ai): documentation.
-- [API](https://api.endlesstesting.ai): HTTP API. The page SDK is https://api.endlesstesting.ai/api/sdk.js
+- [API](https://api.endlesstesting.ai): HTTP API. The page SDK is https://api.endlesstesting.ai/api/sdk.js with async and data-cfasync="false". Set blockUntilVariants to false. The full snippet is in llms-full.txt.
 - [GitHub](https://github.com/valentinyeo/endless-testing): source.
 
 ## CLI

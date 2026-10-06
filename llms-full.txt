@@ -107,16 +107,17 @@ Do not invent an API key. Sign in with `et login` or the `login` tool. Do not re
 
 ## SDK
 
-Public pages install this snippet. Keep `blockUntilVariants` false.
+Public pages install both tags below. The SDK blocks rendering when `blockUntilVariants` is omitted, so set it to false. The script tag needs `async` and `data-cfasync="false"` so Cloudflare Rocket Loader does not rewrite it. `et snippet <site>` prints a snippet with that site's domainId. Add `blockUntilVariants: false` before publishing that snippet.
 
 ```
+<script>
 window.AB_CONFIG = {
   base: "https://api.endlesstesting.ai",
   blockUntilVariants: false
 };
+</script>
+<script src="https://api.endlesstesting.ai/api/sdk.js" async data-cfasync="false"></script>
 ```
-
-Script URL: https://api.endlesstesting.ai/api/sdk.js
 
 ## Links
 
