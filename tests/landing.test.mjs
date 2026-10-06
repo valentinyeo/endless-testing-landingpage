@@ -183,6 +183,81 @@ function hasInstallFile(text, name) {
   return new RegExp(`(?<![A-Za-z0-9_-])${name}(?![A-Za-z0-9_-])`).test(text);
 }
 
+function decodeEntities(source) {
+  let cur = source;
+  for (let pass = 0; pass < 4; pass++) {
+    const next = cur.replace(/&(#x[0-9a-f]+|#\d+|sol|amp);?/gi, (entity) => {
+      const token = entity.endsWith(';') ? entity.slice(0, -1) : entity;
+      if (/^&sol$/i.test(token)) return '/';
+      if (/^&amp$/i.test(token)) return '&';
+      if (/^&#x[0-9a-f]+$/i.test(token)) {
+        const cp = parseInt(token.slice(3), 16);
+        return cp <= 0x10FFFF ? String.fromCodePoint(cp) : entity;
+      }
+      if (/^&#\d+$/i.test(token)) {
+        const cp = parseInt(token.slice(2), 10);
+        return cp <= 0x10FFFF ? String.fromCodePoint(cp) : entity;
+      }
+      return entity;
+    });
+    if (next === cur) return cur;
+    cur = next;
+  }
+  return cur;
+}
+
+function normalizePage(source) {
+  return decodeEntities(source).replace(/[\u200B-\u200D\uFEFF\u2060\u00AD]/g, '');
+}
+
+function containsReleaseDownload(source) {
+  const decoded = normalizePage(source);
+  if (decoded.includes('releases/download')) return true;
+  return decoded.replace(/<[^>]+>/g, '').includes('releases/download');
+}
+
+function concealedAttrs(attrs) {
+  if (/(?:^|\s)hidden(?:\s|=|$)/i.test(attrs)) return true;
+  const style = attrs.match(/\bstyle\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i);
+  const value = style ? (style[1] ?? style[2] ?? style[3] ?? '') : '';
+  return /display\s*:\s*none\b/i.test(value) || /visibility\s*:\s*hidden\b/i.test(value);
+}
+
+function stripConcealed(fragment) {
+  const openRe = /<([a-zA-Z][\w:-]*)\b([^>]*)>/g;
+  let cur = fragment;
+  for (let pass = 0; pass < 20; pass++) {
+    openRe.lastIndex = 0;
+    let next = '';
+    let cursor = 0;
+    let changed = false;
+    let match;
+    while ((match = openRe.exec(cur))) {
+      if (!concealedAttrs(match[2])) continue;
+      const closeRe = new RegExp(`<(/?)${match[1]}\\b[^>]*>`, 'gi');
+      closeRe.lastIndex = openRe.lastIndex;
+      let depth = 1;
+      let close = -1;
+      let end;
+      while ((end = closeRe.exec(cur))) {
+        depth += end[1] === '/' ? -1 : 1;
+        if (depth === 0) {
+          close = closeRe.lastIndex;
+          break;
+        }
+      }
+      if (close < 0) continue;
+      next += cur.slice(cursor, match.index);
+      cursor = close;
+      openRe.lastIndex = close;
+      changed = true;
+    }
+    if (!changed) return cur;
+    cur = next + cur.slice(cursor);
+  }
+  return cur;
+}
+
 function installParagraph(source) {
   const clean = source.replace(/<!--[\s\S]*?-->/g, '');
   const open = /<div\b[^>]*\bid="terminal"[^>]*>/.exec(clean);
@@ -197,13 +272,10 @@ function installParagraph(source) {
       const sibling = clean.slice(tagRe.lastIndex).match(/^\s*<p\b([^>]*)>([\s\S]*?)<\/p>/);
       assert.ok(sibling, 'install files missing beside the terminal');
       const attrs = sibling[1];
-      const hiddenAttr = /(?:^|\s)hidden(?:\s|=|$)/.test(attrs);
-      if (!/\bclass="[^"]*\binstall-files\b/.test(attrs) || hiddenAttr) {
+      if (!/\bclass="[^"]*\binstall-files\b/.test(attrs) || concealedAttrs(attrs)) {
         assert.fail('install files missing beside the terminal');
       }
-      return sibling[2]
-        .replace(/<([a-zA-Z][\w:-]*)\b[^>]*\shidden\b[^>]*>[\s\S]*?<\/\1>/g, '')
-        .replace(/<[^>]+>/g, '');
+      return normalizePage(stripConcealed(sibling[2]).replace(/<[^>]+>/g, ''));
     }
   }
   assert.fail('install files missing beside the terminal');
@@ -213,7 +285,7 @@ const LINUX_INSTALL_LINE = 'gh release download et --repo valentinyeo/endless-te
 
 function assertInstallFiles(source) {
   if (asksForGitHubLogin(source)) assert.fail('command needs a GitHub login');
-  if (source.includes('releases/download')) assert.fail('page contains releases/download');
+  if (containsReleaseDownload(source)) assert.fail('page contains releases/download');
   const text = installParagraph(source);
   if (!text.includes('gh release download')) assert.fail('gh release download missing');
   for (const name of INSTALL_FILES) {
@@ -293,6 +365,51 @@ test('the page names the four et install files beside the terminal', () => {
   );
   assert.notEqual(noAccess, html);
   assert.throws(() => assertInstallFiles(noAccess), /github access sentence missing/);
+
+  const hiddenAccess = html.replace(
+    'A GitHub login with access to the repository is required.',
+    '<span Hidden>A GitHub login with access to the repository is required.</span>',
+  );
+  assert.notEqual(hiddenAccess, html);
+  assert.throws(() => assertInstallFiles(hiddenAccess), /github access sentence missing/);
+
+  const hiddenCmdCase = html.replace(
+    LINUX_INSTALL_LINE,
+    `<span Hidden>${LINUX_INSTALL_LINE}</span>`,
+  );
+  assert.notEqual(hiddenCmdCase, html);
+  assert.throws(() => assertInstallFiles(hiddenCmdCase), /gh release download missing/);
+
+  const hiddenParagraph = html.replace('<p class="install-files">', '<p Hidden class="install-files">');
+  assert.notEqual(hiddenParagraph, html);
+  assert.throws(() => assertInstallFiles(hiddenParagraph), /install files missing beside the terminal/);
+
+  const noneCmd = html.replace(
+    `<code>${LINUX_INSTALL_LINE}</code>`,
+    `<code style="display:none">${LINUX_INSTALL_LINE}</code>`,
+  );
+  assert.notEqual(noneCmd, html);
+  assert.throws(() => assertInstallFiles(noneCmd), /gh release download missing/);
+
+  const wrongPattern = html.replace('--pattern et-x86_64-linux-musl', '--pattern et-aarch64-macos');
+  assert.notEqual(wrongPattern, html);
+  assert.throws(() => assertInstallFiles(wrongPattern), /gh release download missing/);
+
+  const entityUrl = html.replace('</body>', '<!-- releases&#47;download --></body>');
+  assert.notEqual(entityUrl, html);
+  assert.throws(() => assertInstallFiles(entityUrl), /page contains releases\/download/);
+
+  const namedUrl = html.replace('</body>', 'releases&sol;download</body>');
+  assert.notEqual(namedUrl, html);
+  assert.throws(() => assertInstallFiles(namedUrl), /page contains releases\/download/);
+
+  const splitUrl = html.replace('</body>', '<p>releases/<span>download</span></p></body>');
+  assert.notEqual(splitUrl, html);
+  assert.throws(() => assertInstallFiles(splitUrl), /page contains releases\/download/);
+
+  const zwUrl = html.replace('</body>', 'releases/\u200bdownload</body>');
+  assert.notEqual(zwUrl, html);
+  assert.throws(() => assertInstallFiles(zwUrl), /page contains releases\/download/);
 });
 
 test('the page does not ask for an OpenRouter key', () => {
@@ -636,8 +753,19 @@ describe('landing layout', () => {
             node = node.parentElement;
             bg = node ? getComputedStyle(node).backgroundColor : bg;
           }
+          const code = el.querySelector('code');
+          const codeStyle = code ? getComputedStyle(code) : null;
+          const codeRect = code ? code.getBoundingClientRect() : null;
+          let codeBg = codeStyle ? codeStyle.backgroundColor : bg;
+          let codeNode = code;
+          while (codeNode && (codeBg === 'transparent' || codeBg === 'rgba(0, 0, 0, 0)')) {
+            codeNode = codeNode.parentElement;
+            codeBg = codeNode ? getComputedStyle(codeNode).backgroundColor : codeBg;
+          }
+          const pageText = document.body.innerText.replace(/[\u200B-\u200D\uFEFF\u2060\u00AD]/g, '');
           return {
             text: el.innerText,
+            pageText,
             overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
             display: style.display,
             visibility: style.visibility,
@@ -650,6 +778,16 @@ describe('landing layout', () => {
             right: rect.right,
             width: rect.width,
             innerWidth: window.innerWidth,
+            codeText: code ? code.innerText : '',
+            codeDisplay: codeStyle ? codeStyle.display : 'none',
+            codeVisibility: codeStyle ? codeStyle.visibility : 'hidden',
+            codeOpacity: codeStyle ? Number(codeStyle.opacity) : 0,
+            codeFont: codeStyle ? parseFloat(codeStyle.fontSize) : 0,
+            codeColor: codeStyle ? codeStyle.color : style.color,
+            codeBg,
+            codeHeight: codeRect ? codeRect.height : 0,
+            codeLeft: codeRect ? codeRect.left : 0,
+            codeRight: codeRect ? codeRect.right : 0,
           };
         });
         const where = `${scheme} ${width}`;
@@ -663,8 +801,20 @@ describe('landing layout', () => {
         assert.ok(info.left >= -1 && info.right <= info.innerWidth + 1, `${where} install files clipped`);
         for (const name of INSTALL_FILES) assert.ok(hasInstallFile(info.text, name), `${where} ${name}`);
         assert.match(info.text, /Each file is the program for that machine\./);
+        assert.ok(info.text.includes(LINUX_INSTALL_LINE), `${where} install command not visible`);
+        assert.match(info.text, /A GitHub login with access to the repository is required\./);
+        assert.equal(info.pageText.includes('releases/download'), false, `${where} shows releases/download`);
+        assert.equal(info.codeText.trim(), LINUX_INSTALL_LINE, where);
+        assert.notEqual(info.codeDisplay, 'none', where);
+        assert.equal(info.codeVisibility, 'visible', where);
+        assert.ok(info.codeOpacity >= 0.99, `${where} command opacity ${info.codeOpacity}`);
+        assert.ok(info.codeFont >= 12, `${where} command font ${info.codeFont}`);
+        assert.ok(info.codeHeight > 8, `${where} command height ${info.codeHeight}`);
+        assert.ok(info.codeLeft >= -1 && info.codeRight <= info.innerWidth + 1, `${where} command clipped`);
         const ratio = contrastRatio(rgb(info.color), rgb(info.bg));
         assert.ok(ratio >= 4.5, `${where} install contrast ${ratio.toFixed(2)}`);
+        const codeRatio = contrastRatio(rgb(info.codeColor), rgb(info.codeBg));
+        assert.ok(codeRatio >= 4.5, `${where} command contrast ${codeRatio.toFixed(2)}`);
       }
     }
   });
