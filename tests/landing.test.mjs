@@ -101,6 +101,24 @@ function assertNoOpenRouterKey(source) {
   if (asksForOpenRouterKey(source)) assert.fail('page asks for an OpenRouter key');
 }
 
+function statusSample(source) {
+  const terminal = source.match(/id="terminal"[\s\S]*?<code>([\s\S]*?)<\/code>/);
+  assert.ok(terminal, 'terminal sample missing');
+  const text = terminal[1].replace(/<[^>]+>/g, '');
+  const marker = '$ et status';
+  const at = text.indexOf(marker);
+  assert.notEqual(at, -1, 'et status command missing from terminal');
+  return text.slice(at + marker.length);
+}
+
+function assertStatusNamesWinner(source) {
+  const line = statusSample(source).split('\n').map((item) => item.trim()).find((item) => {
+    const named = item.match(/^winner:\s+(\S(?:.*\S)?)$/i);
+    return Boolean(named) && named[1].toLowerCase() !== 'null';
+  });
+  assert.ok(line, 'sample has no winner line');
+}
+
 function assertLinesSection(source) {
   const lines = source.match(/<section id="lines">([\s\S]*?)<\/section>/);
   assert.ok(lines, 'lines section missing');
@@ -149,6 +167,17 @@ test('the page does not ask for an OpenRouter key', () => {
   assertNoOpenRouterKey('OpenRouter keyboard');
   const far = `Traffic is not sent to OpenRouter.${' '.repeat(400)}if (event.key === 'Escape') closeMenu();`;
   assertNoOpenRouterKey(far);
+});
+
+test('the et status sample names a winner', () => {
+  assertStatusNamesWinner(html);
+  const stripped = html.replace('winner: Clear price', 'round: 2');
+  assert.notEqual(stripped, html);
+  assert.throws(() => assertStatusNamesWinner(stripped), /sample has no winner line/);
+  const unnamed = html.replace('winner: Clear price', 'winner:');
+  assert.throws(() => assertStatusNamesWinner(unnamed), /sample has no winner line/);
+  const blank = html.replace('winner: Clear price', '');
+  assert.throws(() => assertStatusNamesWinner(blank), /sample has no winner line/);
 });
 
 test('you connect Claude, Codex, or ChatGPT and the product writes the next lines', () => {
@@ -394,7 +423,7 @@ describe('landing layout', () => {
     assert.ok(apart >= 20, `terminal background ${dark.panel} blends into ${dark.body} (${apart})`);
 
     const commands = await page.locator('#terminal').innerText();
-    assert.match(commands, /\$ et login\n\$ et site add\n\$ et round start\n\$ et status/);
+    assert.match(commands, /\$ et login\n\$ et site add\n\$ et round start\n\$ et status\nwinner: Clear price/);
   });
 
   test('trial button text stays on the green fill', async () => {
