@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>endlesstesting.ai - The Always-On Optimization Engine</title>
-    <meta name="description" content="Turn your optimization on autopilot. You buy the slots, our AI fills them with endless tests to continuously improve your conversion rate.">
+    <title>endlesstesting.ai. A/B testing for AI generalists</title>
+    <meta name="description" content="Run A/B tests on your landing page from Claude, Codex, or ChatGPT through the CLI, MCP, or API.">
     <script>
         !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
         posthog.init('phc_sNBq426e7JGhRuovpk6Jcrn4ShGz9RiYfPHaiz6ssyud', {
@@ -12,394 +12,370 @@
             person_profiles: 'identified_only'
         });
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        display: ['Space Grotesk', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            50: '#f0fdf4',
-                            100: '#dcfce7',
-                            400: '#4ade80', // neon green
-                            500: '#22c55e',
-                            600: '#16a34a',
-                            900: '#14532d',
-                        },
-                        dark: {
-                            900: '#0a0a0a', // Almost black
-                            800: '#171717', // Dark gray
-                            700: '#262626',
-                        }
-                    },
-                    animation: {
-                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'float': 'float 6s ease-in-out infinite',
-                        'scan': 'scan 2s linear infinite',
-                    },
-                    keyframes: {
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0)' },
-                            '50%': { transform: 'translateY(-10px)' },
-                        },
-                        scan: {
-                            '0%': { top: '0%' },
-                            '100%': { top: '100%' },
-                        }
-                    }
-                }
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f3f4f1;
+            --bg-elev: #ffffff;
+            --fg: #141614;
+            --muted: #4e564f;
+            --faint: #6d756e;
+            --line: #d9ddd6;
+            --accent: #12753a;
+            --accent-soft: #e5f4ea;
+            --on-accent: #ffffff;
+            --nav: rgba(243, 244, 241, 0.92);
+            --code: #121612;
+            --code-fg: #e7f0e8;
+            --code-dim: #8aa192;
+            --code-prompt: #7dce96;
+            --shadow: 0 16px 40px rgba(20, 22, 20, 0.06);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                color-scheme: dark;
+                --bg: #070807;
+                --bg-elev: #121412;
+                --fg: #f2f5f2;
+                --muted: #b4bcb5;
+                --faint: #8b948c;
+                --line: rgba(255, 255, 255, 0.1);
+                --accent: #4ade80;
+                --accent-soft: rgba(74, 222, 128, 0.12);
+                --on-accent: #052e16;
+                --nav: rgba(7, 8, 7, 0.9);
+                --code: #0c0f0c;
+                --code-fg: #e7f0e8;
+                --code-dim: #8aa192;
+                --code-prompt: #4ade80;
+                --shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
             }
         }
-    </script>
-    <style>
+        * { box-sizing: border-box; }
+        [hidden] { display: none !important; }
+        html { scroll-behavior: smooth; }
         body {
-            background-color: #050505;
-            color: #ffffff;
-            background-image: 
-                radial-gradient(circle at 15% 50%, rgba(34, 197, 94, 0.08), transparent 25%),
-                radial-gradient(circle at 85% 30%, rgba(59, 130, 246, 0.08), transparent 25%);
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+            font-size: 1rem;
+            line-height: 1.6;
         }
-        .glass-panel {
-            background: rgba(23, 23, 23, 0.6);
+        a { color: inherit; }
+        h1, h2, h3 { font-family: "Space Grotesk", Inter, sans-serif; line-height: 1.15; letter-spacing: -0.02em; margin: 0; }
+        p { margin: 0; }
+        .wrap { width: min(1080px, calc(100% - 2rem)); margin-inline: auto; }
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--nav);
+            border-bottom: 1px solid var(--line);
             backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        .code-glow {
-            text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+        .nav-bar { min-height: 4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        .logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; font-family: "Space Grotesk", sans-serif; font-weight: 700; }
+        .logo-mark {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 0.6rem;
+            display: grid;
+            place-items: center;
+            background: var(--accent-soft);
+            color: var(--accent);
+            font-size: 1.1rem;
         }
-        .grid-bg {
-            background-size: 50px 50px;
-            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                              linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-            mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+        .logo span { color: var(--faint); font-weight: 500; }
+        .nav-links { display: none; align-items: center; gap: 1.25rem; color: var(--muted); font-size: 0.92rem; font-weight: 500; }
+        .nav-links a { text-decoration: none; }
+        .nav-links a:hover { color: var(--fg); }
+        .nav-toggle {
+            border: 1px solid var(--line);
+            background: var(--bg-elev);
+            color: var(--fg);
+            border-radius: 999px;
+            padding: 0.4rem 0.8rem;
+            font: inherit;
+        }
+        .nav-panel {
+            border-top: 1px solid var(--line);
+            padding: 0.5rem 0 1rem;
+            display: grid;
+            gap: 0.25rem;
+        }
+        .nav-panel a { text-decoration: none; color: var(--muted); padding: 0.55rem 0; }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            border-radius: 999px;
+            padding: 0.75rem 1.1rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+        }
+        .btn-primary { background: var(--accent); color: var(--on-accent); }
+        .btn-primary:hover { filter: brightness(1.05); }
+        .btn-quiet { background: transparent; border-color: var(--line); color: var(--fg); }
+        .hero { padding: 3.5rem 0 2rem; }
+        .hero-grid { display: grid; gap: 2rem; align-items: center; }
+        .eyebrow {
+            display: inline-block;
+            margin-bottom: 1rem;
+            color: var(--accent);
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        h1 { font-size: clamp(2.1rem, 7vw, 4rem); max-width: 14ch; }
+        .lead { margin-top: 1rem; max-width: 38rem; color: var(--muted); font-size: 1.05rem; }
+        .hero-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
+        .terminal {
+            margin: 0;
+            background: var(--code);
+            color: var(--code-fg);
+            border-radius: 1rem;
+            padding: 1rem 1.1rem 1.15rem;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+        .terminal-bar { display: flex; gap: 0.4rem; margin-bottom: 0.8rem; }
+        .terminal-bar i { width: 0.7rem; height: 0.7rem; border-radius: 50%; background: #3a403c; display: block; }
+        .terminal code { display: block; white-space: pre-wrap; }
+        .prompt { color: var(--code-prompt); }
+        .dim { color: var(--code-dim); }
+        section { padding: 3.25rem 0; }
+        .section-intro { max-width: 38rem; margin-bottom: 1.5rem; }
+        .section-intro h2 { font-size: clamp(1.7rem, 4vw, 2.4rem); }
+        .section-intro p { margin-top: 0.7rem; color: var(--muted); }
+        .steps, .cards, .split { display: grid; gap: 0.9rem; }
+        .steps { list-style: none; margin: 0; padding: 0; }
+        .card {
+            background: var(--bg-elev);
+            border: 1px solid var(--line);
+            border-radius: 1rem;
+            padding: 1.1rem 1.15rem;
+        }
+        .step-num { color: var(--accent); font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 0.85rem; }
+        .card h3 { font-size: 1.15rem; margin: 0.35rem 0 0.4rem; }
+        .card p, .card li { color: var(--muted); }
+        .card ul { margin: 0.4rem 0 0; padding-left: 1.1rem; }
+        .split .card h3 { margin-top: 0; }
+        .pricing { border-top: 1px solid var(--line); }
+        .billing { display: flex; justify-content: center; margin: 0 0 1.25rem; }
+        .billing-switch { display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.25rem; border: 1px solid var(--line); border-radius: 999px; background: var(--bg-elev); }
+        .billing-switch button {
+            border: 0;
+            background: transparent;
+            color: var(--muted);
+            font: inherit;
+            font-size: 0.92rem;
+            font-weight: 600;
+            border-radius: 999px;
+            padding: 0.45rem 0.9rem;
+            cursor: pointer;
+        }
+        .billing-switch button[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+        .price-card { max-width: 28rem; margin: 0 auto; }
+        .price-kicker { color: var(--accent); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+        .price { display: flex; align-items: baseline; gap: 0.25rem; margin-top: 0.4rem; }
+        .price strong { font-family: "Space Grotesk", sans-serif; font-size: clamp(3rem, 12vw, 4.2rem); letter-spacing: -0.04em; font-weight: 700; }
+        .price-note { color: var(--muted); margin-top: 0.35rem; }
+        .price-list { margin: 1.2rem 0; padding: 0; list-style: none; display: grid; gap: 0.55rem; }
+        .price-list li { color: var(--fg); }
+        .price-card .btn { width: 100%; }
+        .fine { margin-top: 0.7rem; text-align: center; color: var(--faint); font-size: 0.8rem; }
+        .oss { margin-top: 1.25rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; }
+        .oss p { color: var(--muted); margin-top: 0.35rem; }
+        footer { border-top: 1px solid var(--line); padding: 1.5rem 0 2rem; color: var(--faint); font-size: 0.9rem; }
+        footer a { color: var(--muted); }
+        #dogfood-note { margin-top: 0.4rem; }
+        @media (min-width: 768px) {
+            .nav-links { display: flex; }
+            .nav-toggle, .nav-panel { display: none; }
+            .hero { padding: 5rem 0 3rem; }
+            .hero-grid { grid-template-columns: 1.05fr 0.95fr; }
+            .steps { grid-template-columns: repeat(4, 1fr); }
+            .cards { grid-template-columns: repeat(3, 1fr); }
+            .split { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
-<body class="antialiased min-h-screen flex flex-col overflow-x-hidden">
-
-    <!-- Background Grid Effect -->
-    <div class="fixed inset-0 grid-bg pointer-events-none z-0"></div>
-
-    <!-- Navigation -->
-    <nav class="relative z-50 w-full border-b border-white/5 bg-dark-900/50 backdrop-blur-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-brand-400 text-3xl font-light">all_inclusive</span>
-                </div>
-                <span class="font-display font-bold text-xl tracking-tight">
-                    <span class="text-gray-400">endless</span><span class="text-white">testing</span><span class="text-brand-400">.ai</span>
-                </span>
-            </div>
-            <!-- Mobile menu button -->
-            <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="md:hidden p-2 text-gray-400 hover:text-white transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-            </button>
-            <!-- Desktop nav -->
-            <div class="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-                <a href="https://docs.endlesstesting.ai" class="hover:text-white transition-colors">Docs</a>
-                <a href="#why-endless" class="hover:text-white transition-colors">How it Works</a>
-                <a href="#pricing" class="hover:text-white transition-colors">Pricing</a>
-                <a href="https://github.com/valentinyeo/endless-testing" class="hover:text-white transition-colors flex items-center gap-1.5">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-                    GitHub
-                </a>
-                <a href="https://dash.endlesstesting.ai/" class="px-5 py-2.5 rounded-full bg-white text-black font-semibold hover:bg-brand-400 hover:text-black transition-all">Get Started</a>
-            </div>
+<body>
+    <header class="nav">
+        <div class="wrap nav-bar">
+            <a class="logo" href="/">endlesstesting<span>.ai</span></a>
+            <nav class="nav-links" aria-label="Primary">
+                <a href="#how">How it works</a>
+                <a href="#connect">Connect</a>
+                <a href="#dashboard">Dashboard</a>
+                <a href="#pricing">Pricing</a>
+                <a href="https://docs.endlesstesting.ai">Docs</a>
+                <a href="https://github.com/valentinyeo/endless-testing">GitHub</a>
+                <a class="btn btn-primary" href="https://dash.endlesstesting.ai/">Start 7-day trial</a>
+            </nav>
+            <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="nav-panel">Menu</button>
         </div>
-    </nav>
-    <!-- Mobile menu dropdown -->
-    <div id="mobile-menu" class="hidden md:hidden relative z-50 border-b border-white/5 bg-dark-900/95 backdrop-blur-md">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-3 text-sm font-medium text-gray-400">
-            <a href="https://docs.endlesstesting.ai" class="hover:text-white transition-colors py-2">Docs</a>
-            <a href="#why-endless" class="hover:text-white transition-colors py-2" onclick="document.getElementById('mobile-menu').classList.add('hidden')">How it Works</a>
-            <a href="#pricing" class="hover:text-white transition-colors py-2" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Pricing</a>
-            <a href="https://github.com/valentinyeo/endless-testing" class="hover:text-white transition-colors flex items-center gap-1.5 py-2">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-                GitHub
-            </a>
-            <a href="https://dash.endlesstesting.ai/" class="px-5 py-2.5 rounded-full bg-white text-black font-semibold hover:bg-brand-400 hover:text-black transition-all text-center mt-1" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Get Started</a>
+        <div class="wrap nav-panel" id="nav-panel" hidden>
+            <a href="#how">How it works</a>
+            <a href="#connect">Connect</a>
+            <a href="#dashboard">Dashboard</a>
+            <a href="#pricing">Pricing</a>
+            <a href="https://docs.endlesstesting.ai">Docs</a>
+            <a href="https://github.com/valentinyeo/endless-testing">GitHub</a>
+            <a class="btn btn-primary" href="https://dash.endlesstesting.ai/">Start 7-day trial</a>
         </div>
-    </div>
+    </header>
 
-    <!-- Hero Section -->
-    <main class="relative z-10 flex-grow flex items-center justify-center py-12 md:py-20 lg:py-32">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 w-full grid lg:grid-cols-2 gap-10 lg:gap-16 items-start">
-            
-            <!-- Hero Content -->
-            <div class="max-w-2xl">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-semibold uppercase tracking-wider mb-8">
-                    <span class="relative flex h-2 w-2">
-                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
-                      <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
-                    </span>
-                    AI Engine Online
+    <main>
+        <section class="hero">
+            <div class="wrap hero-grid">
+                <div>
+                    <p class="eyebrow">AI generalists</p>
+                    <h1>A/B testing for AI generalists</h1>
+                    <p class="lead">For anyone who runs A/B tests on a landing page from Claude, Codex, or ChatGPT, through the CLI, MCP, or API.</p>
+                    <div class="hero-actions">
+                        <a id="primary-cta" class="btn btn-primary" href="https://dash.endlesstesting.ai/">Start 7-day trial</a>
+                        <a class="btn btn-quiet" href="https://docs.endlesstesting.ai">Docs</a>
+                    </div>
                 </div>
-                
-                <h1 class="font-display text-4xl sm:text-5xl lg:text-7xl font-bold leading-[1.1] mb-6 tracking-tight">
-                    Optimizing <br>
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-gray-500">Forever.</span>
-                </h1>
-                
-                <h2 class="text-2xl font-bold text-white mb-6">
-                    The last experimentation software you need
-                </h2>
-                
-                <ul class="space-y-3 sm:space-y-4 mb-8 sm:mb-10 text-base sm:text-lg text-gray-300">
-                    <li class="flex items-center gap-3">
-                        <svg class="w-5 h-5 text-brand-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                        <span>Stop manually creating A/B tests</span>
-                    </li>
-                    <li class="flex items-center gap-3">
-                        <svg class="w-5 h-5 text-brand-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                        <span>Simply buy capacity (5, 10, or 20 slots)</span>
-                    </li>
-                    <li class="flex items-center gap-3">
-                        <svg class="w-5 h-5 text-brand-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                        <span>AI deploys endless experiments 24/7</span>
-                    </li>
-                </ul>
-                
-                <div class="flex flex-col gap-2.5 sm:gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:gap-3">
-                    <!-- CLI install command (primary CTA) -->
-                    <button onclick="navigator.clipboard.writeText('npx endlesstesting')" class="group px-4 sm:px-6 py-3 sm:py-4 rounded-xl bg-dark-800 border border-white/10 text-left font-mono text-sm sm:text-lg hover:border-brand-500/40 transition-all flex items-center justify-between min-w-0">
-                        <span class="truncate"><span class="text-gray-500">$ </span><span class="text-white">npx endlesstesting</span></span>
-                        <span class="text-gray-500 group-hover:text-brand-400 transition-colors text-xs sm:text-sm ml-2 flex-shrink-0">copy</span>
-                    </button>
-
-                    <!-- Docs -->
-                    <a href="https://docs.endlesstesting.ai" class="px-4 sm:px-6 py-3 sm:py-4 rounded-xl border border-white/10 bg-white/5 text-white font-medium text-base sm:text-lg hover:bg-white/10 transition-all text-center">
-                        Docs
-                    </a>
+                <div id="terminal" class="terminal" aria-label="Terminal flow">
+                    <div class="terminal-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+                    <code><span class="prompt">$</span> et login
+<span class="prompt">$</span> et site add
+<span class="prompt">$</span> et round start
+<span class="prompt">$</span> et status</code>
                 </div>
             </div>
+        </section>
 
-            <!-- Hero Visual / Dashboard Simulation -->
-            <div class="relative flex items-start justify-center px-2 sm:px-0 lg:pt-16">
-                <!-- Abstract Glow -->
-                <div class="absolute inset-0 bg-brand-500/20 blur-[100px] rounded-full opacity-20 animate-pulse-slow"></div>
-                
-                <!-- Main Dashboard Card -->
-                <div class="relative w-full glass-panel rounded-2xl p-4 sm:p-6 shadow-2xl animate-float border border-white/10 bg-dark-800/80 overflow-hidden">
-                    <!-- Header -->
-                    <div class="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
-                        </div>
-                        <div class="text-xs font-mono text-brand-400 bg-brand-900/30 px-2 py-1 rounded">● Live Optimization</div>
-                    </div>
-
-                    <!-- Stats Row -->
-                    <div class="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8">
-                        <div class="bg-white/5 rounded-lg p-2 sm:p-3 border border-white/5">
-                            <div class="text-[10px] sm:text-xs text-gray-400 mb-1">Active Slots</div>
-                            <div class="text-base sm:text-xl font-bold font-mono text-white">10<span class="text-gray-600">/10</span></div>
-                        </div>
-                        <div class="bg-white/5 rounded-lg p-2 sm:p-3 border border-white/5">
-                            <div class="text-[10px] sm:text-xs text-gray-400 mb-1">Tests Deployed</div>
-                            <div class="text-base sm:text-xl font-bold font-mono text-white">247</div>
-                        </div>
-                        <div class="bg-white/5 rounded-lg p-2 sm:p-3 border border-white/5">
-                            <div class="text-[10px] sm:text-xs text-gray-400 mb-1">Lift Generated</div>
-                            <div class="text-base sm:text-xl font-bold font-mono text-brand-400">+24.8%</div>
-                        </div>
-                    </div>
-
-                    <!-- Live Feed Simulation -->
-                    <div class="space-y-2 sm:space-y-3 font-mono text-xs sm:text-sm">
-                        <div class="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded bg-white/[0.02] border-l-2 border-brand-500">
-                            <span class="text-[10px] sm:text-xs text-gray-500 flex-shrink-0">10:42:01</span>
-                            <span class="text-brand-400 flex-shrink-0">Deployed:</span>
-                            <span class="text-gray-300 truncate">CTA Color Variant B</span>
-                        </div>
-                        <div class="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded bg-white/[0.02] border-l-2 border-blue-500">
-                            <span class="text-[10px] sm:text-xs text-gray-500 flex-shrink-0">10:41:45</span>
-                            <span class="text-blue-400 flex-shrink-0">Analyzing:</span>
-                            <span class="text-gray-300 truncate">Homepage Headline V3</span>
-                        </div>
-                        <div class="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded bg-white/[0.02] border-l-2 border-purple-500 opacity-60">
-                            <span class="text-[10px] sm:text-xs text-gray-500 flex-shrink-0">10:40:12</span>
-                            <span class="text-purple-400 flex-shrink-0">Generating:</span>
-                            <span class="text-gray-300 truncate">New Pricing Layout</span>
-                        </div>
-                        <div class="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded bg-white/[0.02] border-l-2 border-gray-700 opacity-40">
-                            <span class="text-[10px] sm:text-xs text-gray-500 flex-shrink-0">10:39:55</span>
-                            <span class="text-gray-400 flex-shrink-0">Completed:</span>
-                            <span class="text-gray-500 line-through truncate">Nav Bar Test #82</span>
-                        </div>
-                    </div>
-
-                    <!-- Scanning Line Effect -->
-                    <div class="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden rounded-2xl">
-                         <div class="absolute w-full h-[2px] bg-gradient-to-r from-transparent via-brand-400/50 to-transparent animate-scan shadow-[0_0_15px_rgba(74,222,128,0.5)]"></div>
-                    </div>
+        <section id="how">
+            <div class="wrap">
+                <div class="section-intro">
+                    <h2>How it works</h2>
+                    <p>An endless loop. The winner stays live. The next round starts itself.</p>
                 </div>
+                <ol class="steps">
+                    <li class="card">
+                        <div class="step-num">01</div>
+                        <h3>Sign in and add the site</h3>
+                        <p>et login signs you in. et site add adds the landing page.</p>
+                    </li>
+                    <li class="card">
+                        <div class="step-num">02</div>
+                        <h3>Start a round</h3>
+                        <p>et round start opens the round.</p>
+                    </li>
+                    <li class="card">
+                        <div class="step-num">03</div>
+                        <h3>The winner stays live</h3>
+                        <p>When the round ends, the winner stays live.</p>
+                    </li>
+                    <li class="card">
+                        <div class="step-num">04</div>
+                        <h3>The next round starts itself</h3>
+                        <p>The next round starts itself. et status reports the round.</p>
+                    </li>
+                </ol>
+            </div>
+        </section>
 
-                <!-- Floating Badge -->
-                <div class="absolute -bottom-4 -right-2 sm:-bottom-6 sm:-right-6 glass-panel p-3 sm:p-4 rounded-xl border-l-4 border-brand-500 shadow-xl animate-float" style="animation-delay: 1s;">
-                    <div class="flex items-center gap-3">
-                        <div class="text-2xl">🚀</div>
-                        <div>
-                            <div class="text-xs text-gray-400">Conversion Rate</div>
-                            <div class="text-lg font-bold text-white">4.2% <span class="text-brand-400 text-sm">▲ 12%</span></div>
-                        </div>
-                    </div>
+        <section id="connect">
+            <div class="wrap">
+                <div class="section-intro">
+                    <h2>Connect your AI</h2>
+                    <p>CLI, MCP, and API are equal. Claude, Codex, and ChatGPT can use any of them.</p>
+                </div>
+                <div class="cards">
+                    <article class="card">
+                        <h3>CLI</h3>
+                        <p>et login, et site add, et round start, et status.</p>
+                    </article>
+                    <article class="card">
+                        <h3>MCP</h3>
+                        <p>The same actions from Claude, Codex, or ChatGPT.</p>
+                    </article>
+                    <article class="card">
+                        <h3>API</h3>
+                        <p>The same actions over HTTP.</p>
+                    </article>
                 </div>
             </div>
-        </div>
+        </section>
+
+        <section id="dashboard">
+            <div class="wrap">
+                <div class="section-intro">
+                    <h2>Dashboard</h2>
+                    <p>Results live in the dashboard. The kill switch stops a round.</p>
+                </div>
+                <div class="split">
+                    <article class="card">
+                        <h3>Results</h3>
+                        <p>The dashboard shows the current round and its results.</p>
+                    </article>
+                    <article class="card">
+                        <h3>Kill switch</h3>
+                        <p>The kill switch stops the round.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="pricing" id="pricing">
+            <div class="wrap">
+                <div class="section-intro" style="margin-inline: auto; text-align: center;">
+                    <h2>Pricing</h2>
+                    <p>7-day free trial. Card required. Cancel before the trial ends and you are not charged.</p>
+                </div>
+                <div class="billing" role="tablist" aria-label="Billing period">
+                    <div class="billing-switch">
+                        <button type="button" role="tab" aria-selected="true" id="billing-monthly">Monthly</button>
+                        <button type="button" role="tab" aria-selected="false" id="billing-annual">Annual, save $600</button>
+                    </div>
+                </div>
+                <article class="card price-card">
+                    <p class="price-kicker">Endless Testing</p>
+                    <div class="price">
+                        <strong id="price-amount">$299</strong>
+                        <span>/mo</span>
+                    </div>
+                    <p id="price-subcopy" class="price-note">or <strong>$249/mo</strong> billed annually. Save $600/yr.</p>
+                    <ul class="price-list">
+                        <li>5 concurrent tests</li>
+                        <li>CLI, MCP, and API</li>
+                        <li>Dashboard with results and a kill switch</li>
+                        <li>Winner stays live. The next round starts itself.</li>
+                        <li>Invite your team</li>
+                        <li>7-day free trial, card required</li>
+                    </ul>
+                    <a class="btn btn-primary" href="https://dash.endlesstesting.ai/">Start 7-day trial</a>
+                    <p class="fine">Billed via Stripe. Cancel in one click.</p>
+                </article>
+                <article class="card oss">
+                    <div>
+                        <h3>Open source CLI. Source-available backend.</h3>
+                        <p>The CLI, SDK, and dashboard are MIT-licensed. The backend is source-available under BSL 1.1, converting to MIT in 2030.</p>
+                    </div>
+                    <a class="btn btn-quiet" href="https://github.com/valentinyeo/endless-testing">View on GitHub</a>
+                </article>
+            </div>
+        </section>
     </main>
 
-    <!-- Why Not PostHog / Traditional A/B Testing -->
-    <section class="relative z-10 py-16 sm:py-24 border-t border-white/5" id="why-endless">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6">
-            <div class="text-center mb-12 sm:mb-16">
-                <h2 class="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Traditional A/B testing is <span class="text-gray-500 line-through">manual</span></h2>
-                <p class="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto">Other tools give you a toolkit. We give you an autonomous optimizer.</p>
-            </div>
-
-            <div class="grid md:grid-cols-2 gap-6 sm:gap-8 max-w-5xl mx-auto">
-                <!-- Traditional -->
-                <div class="glass-panel rounded-2xl p-6 sm:p-8 border border-white/5">
-                    <div class="flex items-center gap-3 mb-6">
-                        <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-                            <span class="text-red-400 text-lg">&#10007;</span>
-                        </div>
-                        <h3 class="font-display text-xl font-bold text-gray-300">Traditional tools</h3>
-                    </div>
-                    <ul class="space-y-4 text-gray-400">
-                        <li class="flex items-start gap-3">
-                            <span class="text-red-400/60 mt-1 flex-shrink-0">&#8212;</span>
-                            <span>You write every hypothesis manually</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="text-red-400/60 mt-1 flex-shrink-0">&#8212;</span>
-                            <span>You create each variant by hand</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="text-red-400/60 mt-1 flex-shrink-0">&#8212;</span>
-                            <span>Fixed 50/50 traffic splits waste conversions</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="text-red-400/60 mt-1 flex-shrink-0">&#8212;</span>
-                            <span>Tests stop when you stop paying attention</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="text-red-400/60 mt-1 flex-shrink-0">&#8212;</span>
-                            <span>No AI integration — can't be run by agents</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Endless Testing -->
-                <div class="glass-panel rounded-2xl p-6 sm:p-8 border border-brand-500/20 bg-brand-500/[0.03]">
-                    <div class="flex items-center gap-3 mb-6">
-                        <div class="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
-                            <span class="material-symbols-outlined text-brand-400">all_inclusive</span>
-                        </div>
-                        <h3 class="font-display text-xl font-bold text-white">Endless Testing</h3>
-                    </div>
-                    <ul class="space-y-4">
-                        <li class="flex items-start gap-3">
-                            <svg class="w-5 h-5 text-brand-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                            <span class="text-gray-200"><strong class="text-white">AI generates tests</strong> — analyzes your page, creates variants automatically</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <svg class="w-5 h-5 text-brand-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                            <span class="text-gray-200"><strong class="text-white">Autonomous iteration</strong> — winner becomes new control, AI creates new challengers. Forever.</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <svg class="w-5 h-5 text-brand-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                            <span class="text-gray-200"><strong class="text-white">Thompson sampling</strong> — traffic shifts to winners in real-time, no wasted conversions</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <svg class="w-5 h-5 text-brand-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                            <span class="text-gray-200"><strong class="text-white">CLI + MCP native</strong> — run from terminal or let Claude Code / Cursor optimize for you</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <svg class="w-5 h-5 text-brand-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                            <span class="text-gray-200"><strong class="text-white">Zero manual work</strong> — point it at a URL and walk away</span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-
-            <p class="text-center text-gray-500 mt-8 sm:mt-12 text-sm sm:text-base">The real competitor isn't PostHog — it's hiring a CRO agency. We replace the agency.</p>
+    <footer>
+        <div class="wrap">
+            <p>&copy; 2026 endlesstesting.ai. <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a></p>
+            <p id="dogfood-note">This page runs the Endless Testing SDK.</p>
         </div>
-    </section>
-
-    <!-- Pricing Section -->
-    <section class="relative z-10 py-16 sm:py-24 bg-dark-900 border-t border-white/5" id="pricing">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6">
-            <div class="text-center mb-10">
-                <h2 class="font-display text-4xl font-bold mb-4">One price. One promise.</h2>
-                <p class="text-gray-400 max-w-xl mx-auto">7-day free trial. Card required. Cancel anytime before the trial ends and you're not charged.</p>
-            </div>
-
-            <!-- Billing period toggle -->
-            <div class="flex justify-center mb-10" role="tablist" aria-label="Billing period">
-                <div class="inline-flex p-1 rounded-full bg-white/5 border border-white/10">
-                    <button type="button" role="tab" aria-selected="true" id="billing-monthly" class="px-5 py-2 rounded-full text-sm font-medium transition-colors bg-brand-500 text-black">Monthly</button>
-                    <button type="button" role="tab" aria-selected="false" id="billing-annual" class="px-5 py-2 rounded-full text-sm font-medium transition-colors text-gray-300 hover:text-white">Annual <span class="ml-1 text-xs text-brand-400">save $600</span></button>
-                </div>
-            </div>
-
-            <div class="max-w-md mx-auto">
-                <!-- Endless Testing — single tier -->
-                <div class="glass-panel p-8 rounded-2xl flex flex-col relative border-brand-500 bg-brand-500/5 shadow-[0_0_50px_rgba(34,197,94,0.15)]">
-                    <div class="mb-6">
-                        <h3 class="text-brand-400 uppercase tracking-widest text-xs font-bold mb-2">Endless Testing</h3>
-                        <div class="flex items-baseline gap-1">
-                            <span id="price-amount" class="text-6xl font-display font-black text-white">$299</span>
-                            <span class="text-lg text-brand-200/50 font-normal">/mo</span>
-                        </div>
-                        <p id="price-subcopy" class="mt-2 text-sm text-brand-100/70">or <span class="font-semibold text-white">$249/mo</span> billed annually — save $600/yr</p>
-                    </div>
-
-                    <div class="mb-8 pb-8 border-b border-white/10">
-                        <p class="text-brand-100/70 text-sm font-medium">AI-powered autonomous A/B testing. One organization. One subscription. Fire your CRO agency.</p>
-                    </div>
-
-                    <div class="flex-grow mb-8">
-                        <ul class="space-y-4 text-sm text-gray-200">
-                            <li class="flex items-center gap-3"><span class="text-brand-400">✓</span> 5 concurrent AI-generated tests</li>
-                            <li class="flex items-center gap-3"><span class="text-brand-400">✓</span> Thompson sampling — auto-winners</li>
-                            <li class="flex items-center gap-3"><span class="text-brand-400">✓</span> CLI + MCP + Dashboard</li>
-                            <li class="flex items-center gap-3"><span class="text-brand-400">✓</span> Invite your whole team</li>
-                            <li class="flex items-center gap-3"><span class="text-brand-400">✓</span> 7-day free trial, card required</li>
-                        </ul>
-                    </div>
-
-                    <a href="https://dash.endlesstesting.ai/" class="w-full block text-center py-4 rounded-xl bg-brand-500 hover:bg-brand-400 text-black font-black transition-all shadow-[0_10px_30px_rgba(34,197,94,0.3)] hover:translate-y-[-2px]">Start 7-day free trial</a>
-                    <p class="mt-3 text-center text-[11px] text-gray-500">Billed via Stripe. Cancel in one click.</p>
-                </div>
-            </div>
-
-            <!-- Open Source Banner -->
-            <div class="mt-12 p-8 rounded-2xl bg-gradient-to-r from-dark-800 to-dark-900 border border-white/10 flex flex-col md:flex-row items-center justify-between gap-8">
-                <div>
-                    <h3 class="text-2xl font-bold text-white mb-2">Open source CLI. Source-available backend.</h3>
-                    <p class="text-gray-400">The CLI, SDK, and dashboard are MIT-licensed. The backend is source-available under BSL 1.1, converting to MIT in 2030.</p>
-                </div>
-                <a href="https://github.com/valentinyeo/endless-testing" class="px-8 py-4 rounded-lg bg-white text-black font-bold hover:bg-gray-200 transition-colors whitespace-nowrap">
-                    View on GitHub
-                </a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Simple Footer for Context (since we removed other sections) -->
-    <footer class="border-t border-white/5 py-8 text-center text-gray-600 text-sm relative z-10">
-        <p>&copy; 2026 endlesstesting.ai. All systems operational. &middot; <a href="/privacy.html" class="hover:text-white">Privacy</a> &middot; <a href="/terms.html" class="hover:text-white">Terms</a></p>
     </footer>
 
 <!-- Endless Testing A/B SDK -->
@@ -413,30 +389,33 @@
 
 <script>
   (function () {
+    var toggle = document.getElementById('nav-toggle');
+    var panel = document.getElementById('nav-panel');
+    if (toggle && panel) {
+      toggle.addEventListener('click', function () {
+        var open = panel.hasAttribute('hidden');
+        if (open) panel.removeAttribute('hidden');
+        else panel.setAttribute('hidden', '');
+        toggle.setAttribute('aria-expanded', String(open));
+      });
+    }
     var monthly = document.getElementById('billing-monthly');
     var annual = document.getElementById('billing-annual');
     var amount = document.getElementById('price-amount');
     var subcopy = document.getElementById('price-subcopy');
     if (!monthly || !annual || !amount || !subcopy) return;
-    var ACTIVE = 'bg-brand-500 text-black';
-    var INACTIVE = 'text-gray-300 hover:text-white';
     function set(mode) {
       var isAnnual = mode === 'annual';
       amount.textContent = isAnnual ? '$249' : '$299';
       subcopy.innerHTML = isAnnual
-        ? 'Billed annually at <span class="font-semibold text-white">$2,988/yr</span> — save $600/yr'
-        : 'or <span class="font-semibold text-white">$249/mo</span> billed annually — save $600/yr';
+        ? 'Billed annually at <strong>$2,988/yr</strong>. Save $600/yr.'
+        : 'or <strong>$249/mo</strong> billed annually. Save $600/yr.';
       annual.setAttribute('aria-selected', String(isAnnual));
       monthly.setAttribute('aria-selected', String(!isAnnual));
-      annual.className = 'px-5 py-2 rounded-full text-sm font-medium transition-colors ' + (isAnnual ? ACTIVE : INACTIVE) + (isAnnual ? '' : '');
-      monthly.className = 'px-5 py-2 rounded-full text-sm font-medium transition-colors ' + (isAnnual ? INACTIVE : ACTIVE);
-      if (isAnnual) annual.innerHTML = 'Annual <span class="ml-1 text-xs text-black/70">save $600</span>';
-      else annual.innerHTML = 'Annual <span class="ml-1 text-xs text-brand-400">save $600</span>';
     }
     monthly.addEventListener('click', function () { set('monthly'); });
     annual.addEventListener('click', function () { set('annual'); });
   })();
 </script>
-
 </body>
 </html>
