@@ -172,14 +172,52 @@ const INSTALL_FILES = [
   'et-x86_64-windows-gnu',
 ];
 
-function assertInstallFiles(source) {
-  const block = source.match(/id="terminal"[\s\S]*?<p class="install-files">([\s\S]*?)<\/p>/);
-  assert.ok(block, 'install files missing beside the terminal');
-  const text = block[1].replace(/<[^>]+>/g, '');
-  for (const name of INSTALL_FILES) {
-    if (!text.includes(name)) assert.fail(`install file missing: ${name}`);
+function asksForGitHubLogin(source) {
+  if (/gh\s+auth\s+login/i.test(source)) return true;
+  if (/\bGITHUB_TOKEN\b/.test(source)) return true;
+  if (/\bGH_TOKEN\b/.test(source)) return true;
+  return false;
+}
+
+function hasInstallFile(text, name) {
+  return new RegExp(`(?<![A-Za-z0-9_-])${name}(?![A-Za-z0-9_-])`).test(text);
+}
+
+function installParagraph(source) {
+  const clean = source.replace(/<!--[\s\S]*?-->/g, '');
+  const open = /<div\b[^>]*\bid="terminal"[^>]*>/.exec(clean);
+  assert.ok(open, 'install files missing beside the terminal');
+  let depth = 1;
+  const tagRe = /<\/?div\b[^>]*>/g;
+  tagRe.lastIndex = open.index + open[0].length;
+  let match;
+  while ((match = tagRe.exec(clean))) {
+    depth += match[0].startsWith('</') ? -1 : 1;
+    if (depth === 0) {
+      const sibling = clean.slice(tagRe.lastIndex).match(/^\s*<p\b([^>]*)>([\s\S]*?)<\/p>/);
+      assert.ok(sibling, 'install files missing beside the terminal');
+      const attrs = sibling[1];
+      const hiddenAttr = /(?:^|\s)hidden(?:\s|=|$)/.test(attrs);
+      if (!/\bclass="[^"]*\binstall-files\b/.test(attrs) || hiddenAttr) {
+        assert.fail('install files missing beside the terminal');
+      }
+      return sibling[2]
+        .replace(/<([a-zA-Z][\w:-]*)\b[^>]*\shidden\b[^>]*>[\s\S]*?<\/\1>/g, '')
+        .replace(/<[^>]+>/g, '');
+    }
   }
-  assert.match(text, /Each file is the program for that machine\./);
+  assert.fail('install files missing beside the terminal');
+}
+
+function assertInstallFiles(source) {
+  if (asksForGitHubLogin(source)) assert.fail('command needs a GitHub login');
+  const text = installParagraph(source);
+  for (const name of INSTALL_FILES) {
+    if (!hasInstallFile(text, name)) assert.fail(`install file missing: ${name}`);
+  }
+  if (!/Each file is the program for that machine\./.test(text)) {
+    assert.fail('install files missing the machine sentence');
+  }
 }
 
 test('the page names the four et install files beside the terminal', () => {
@@ -188,7 +226,36 @@ test('the page names the four et install files beside the terminal', () => {
     const stripped = html.replace(name, 'et-missing');
     assert.notEqual(stripped, html, name);
     assert.throws(() => assertInstallFiles(stripped), new RegExp(`install file missing: ${name}`), name);
+    const longer = html.replace(name, `${name}-extra`);
+    assert.notEqual(longer, html, `${name} longer`);
+    assert.throws(() => assertInstallFiles(longer), new RegExp(`install file missing: ${name}`), `${name} longer`);
   }
+
+  const hiddenName = html.replace('et-x86_64-windows-gnu', '<span hidden>et-x86_64-windows-gnu</span>');
+  assert.notEqual(hiddenName, html);
+  assert.throws(() => assertInstallFiles(hiddenName), /install file missing: et-x86_64-windows-gnu/);
+
+  const hiddenSentence = html.replace(
+    'Each file is the program for that machine.',
+    '<span hidden>Each file is the program for that machine.</span>',
+  );
+  assert.notEqual(hiddenSentence, html);
+  assert.throws(() => assertInstallFiles(hiddenSentence), /machine sentence/);
+
+  const paragraph = html.match(/<p class="install-files">[\s\S]*?<\/p>/)[0];
+  const moved = html.replace(paragraph, '').replace('</body>', `${paragraph}</body>`);
+  assert.notEqual(moved, html);
+  assert.throws(() => assertInstallFiles(moved), /install files missing beside the terminal/);
+
+  const noSentence = html.replace('Each file is the program for that machine.', 'Pick a file.');
+  assert.notEqual(noSentence, html);
+  assert.throws(() => assertInstallFiles(noSentence), /machine sentence/);
+
+  const gh = html.replace('> et login', '> gh auth login');
+  assert.notEqual(gh, html);
+  assert.throws(() => assertInstallFiles(gh), /GitHub login/);
+  assert.throws(() => assertInstallFiles(`${html}\nGITHUB_TOKEN`), /GitHub login/);
+  assert.throws(() => assertInstallFiles(`${html}\nGH_TOKEN`), /GitHub login/);
 });
 
 test('the page does not ask for an OpenRouter key', () => {
@@ -513,6 +580,56 @@ describe('landing layout', () => {
     assert.ok(winner.opacity >= 0.99, `winner opacity ${winner.opacity}`);
     assert.ok(winner.fontSize >= 12, `winner font size ${winner.fontSize}`);
     assert.ok(winner.left >= winner.termLeft - 1 && winner.right <= winner.termRight + 1, 'winner line is clipped');
+  });
+
+  test('install files stay visible beside the terminal', async () => {
+    for (const scheme of ['light', 'dark']) {
+      await page.emulateMedia({ colorScheme: scheme });
+      for (const width of [375, 1280]) {
+        await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
+        await open();
+        const info = await page.evaluate(() => {
+          const el = document.querySelector('.install-files');
+          const term = document.getElementById('terminal');
+          const style = getComputedStyle(el);
+          const rect = el.getBoundingClientRect();
+          let node = el;
+          let bg = getComputedStyle(node).backgroundColor;
+          while (node && (bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)')) {
+            node = node.parentElement;
+            bg = node ? getComputedStyle(node).backgroundColor : bg;
+          }
+          return {
+            text: el.innerText,
+            overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+            display: style.display,
+            visibility: style.visibility,
+            opacity: Number(style.opacity),
+            fontSize: parseFloat(style.fontSize),
+            color: style.color,
+            bg,
+            beside: term.nextElementSibling === el,
+            left: rect.left,
+            right: rect.right,
+            width: rect.width,
+            innerWidth: window.innerWidth,
+          };
+        });
+        const where = `${scheme} ${width}`;
+        assert.equal(info.overflow, 0, `${where} scrolls sideways`);
+        assert.equal(info.beside, true, where);
+        assert.equal(info.display, 'block', where);
+        assert.equal(info.visibility, 'visible', where);
+        assert.ok(info.opacity >= 0.99, `${where} opacity ${info.opacity}`);
+        assert.ok(info.fontSize >= 12, `${where} font ${info.fontSize}`);
+        assert.ok(info.width > 100, where);
+        assert.ok(info.left >= -1 && info.right <= info.innerWidth + 1, `${where} install files clipped`);
+        for (const name of INSTALL_FILES) assert.ok(hasInstallFile(info.text, name), `${where} ${name}`);
+        assert.match(info.text, /Each file is the program for that machine\./);
+        const ratio = contrastRatio(rgb(info.color), rgb(info.bg));
+        assert.ok(ratio >= 4.5, `${where} install contrast ${ratio.toFixed(2)}`);
+      }
+    }
   });
 
   test('trial button text stays on the green fill', async () => {
