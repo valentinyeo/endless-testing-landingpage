@@ -75,6 +75,42 @@ function contrastRatio(a, b) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+function primaryLinks(source) {
+  const links = [];
+  for (const match of source.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)) {
+    const attrs = match[1];
+    const classAttr = attrs.match(/\bclass="([^"]*)"/);
+    if (!classAttr || !classAttr[1].split(/\s+/).includes('btn-primary')) continue;
+    const hrefAttr = attrs.match(/\bhref="([^"]*)"/);
+    const text = match[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    links.push({ href: hrefAttr ? hrefAttr[1] : '', text });
+  }
+  return links;
+}
+
+function assertPrimaryTrialGoal(source) {
+  const links = primaryLinks(source);
+  assert.ok(links.length > 0, 'index has no primary links');
+  for (const link of links) {
+    assert.equal(link.href, 'https://dash.endlesstesting.ai/');
+    if (link.text === 'Start 7-day trial') {
+      assert.fail('primary link still uses the shorter trial label');
+    }
+    assert.equal(link.text, 'Start 7-day free trial');
+  }
+}
+
+test('primary links use Start 7-day free trial and reject the shorter label', () => {
+  assertPrimaryTrialGoal(html);
+  const shorter = '<a class="btn btn-primary" href="https://dash.endlesstesting.ai/">Start 7-day trial</a>';
+  assert.throws(() => assertPrimaryTrialGoal(shorter), /shorter trial label/);
+  const longer = '<a class="btn btn-primary" href="https://dash.endlesstesting.ai/">Start 7-day free trial</a>';
+  assertPrimaryTrialGoal(longer);
+  const reverted = html.replaceAll('Start 7-day free trial', 'Start 7-day trial');
+  assert.notEqual(reverted, html);
+  assert.throws(() => assertPrimaryTrialGoal(reverted), /shorter trial label/);
+});
+
 test('landing copy has the required facts and no em dashes', () => {
   assert.equal(html.includes('\u2014'), false);
   assert.equal(html.includes('\u2013'), false);
