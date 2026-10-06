@@ -177,6 +177,7 @@
         .terminal-bar i { width: 0.7rem; height: 0.7rem; border-radius: 50%; background: #3a403c; display: block; }
         .terminal code { display: block; white-space: pre-wrap; }
         .install-files { margin-top: 0.75rem; color: var(--muted); font-size: 0.82rem; line-height: 1.45; overflow-wrap: anywhere; }
+        .install-files code { display: block; margin-bottom: 0.45rem; color: var(--fg); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
         .prompt { color: var(--code-prompt); }
         .dim { color: var(--code-dim); }
         section { padding: 3.25rem 0; }
@@ -285,7 +286,7 @@
 <span class="prompt">$</span> et status
 <span class="dim">winner: Clear price</span></code>
                     </div>
-                    <p class="install-files">et-x86_64-linux-musl, et-aarch64-linux-musl, et-aarch64-macos, and et-x86_64-windows-gnu. Each file is the program for that machine.</p>
+                    <p class="install-files"><code>gh release download et --repo valentinyeo/endless-testing --pattern et-x86_64-linux-musl</code> et-x86_64-linux-musl, et-aarch64-linux-musl, et-aarch64-macos, and et-x86_64-windows-gnu. Each file is the program for that machine. A GitHub login with access to the repository is required.</p>
                 </div>
             </div>
         </section>

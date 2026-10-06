@@ -209,24 +209,32 @@ function installParagraph(source) {
   assert.fail('install files missing beside the terminal');
 }
 
+const LINUX_INSTALL_LINE = 'gh release download et --repo valentinyeo/endless-testing --pattern et-x86_64-linux-musl';
+
 function assertInstallFiles(source) {
   if (asksForGitHubLogin(source)) assert.fail('command needs a GitHub login');
+  if (source.includes('releases/download')) assert.fail('page contains releases/download');
   const text = installParagraph(source);
+  if (!text.includes('gh release download')) assert.fail('gh release download missing');
   for (const name of INSTALL_FILES) {
     if (!hasInstallFile(text, name)) assert.fail(`install file missing: ${name}`);
   }
   if (!/Each file is the program for that machine\./.test(text)) {
     assert.fail('install files missing the machine sentence');
   }
+  if (!/A GitHub login with access to the repository is required\./.test(text)) {
+    assert.fail('github access sentence missing');
+  }
+  if (!text.includes(LINUX_INSTALL_LINE)) assert.fail('gh release download missing');
 }
 
 test('the page names the four et install files beside the terminal', () => {
   assertInstallFiles(html);
   for (const name of INSTALL_FILES) {
-    const stripped = html.replace(name, 'et-missing');
+    const stripped = html.replaceAll(name, 'et-missing');
     assert.notEqual(stripped, html, name);
     assert.throws(() => assertInstallFiles(stripped), new RegExp(`install file missing: ${name}`), name);
-    const longer = html.replace(name, `${name}-extra`);
+    const longer = html.replaceAll(name, `${name}-extra`);
     assert.notEqual(longer, html, `${name} longer`);
     assert.throws(() => assertInstallFiles(longer), new RegExp(`install file missing: ${name}`), `${name} longer`);
   }
@@ -256,6 +264,35 @@ test('the page names the four et install files beside the terminal', () => {
   assert.throws(() => assertInstallFiles(gh), /GitHub login/);
   assert.throws(() => assertInstallFiles(`${html}\nGITHUB_TOKEN`), /GitHub login/);
   assert.throws(() => assertInstallFiles(`${html}\nGH_TOKEN`), /GitHub login/);
+
+  const noCmd = html.replace(LINUX_INSTALL_LINE, 'curl -O et-x86_64-linux-musl');
+  assert.notEqual(noCmd, html);
+  assert.throws(() => assertInstallFiles(noCmd), /gh release download missing/);
+
+  const hiddenCmd = html.replace(
+    LINUX_INSTALL_LINE,
+    `<span hidden>${LINUX_INSTALL_LINE}</span>`,
+  );
+  assert.notEqual(hiddenCmd, html);
+  assert.throws(() => assertInstallFiles(hiddenCmd), /gh release download missing/);
+
+  const leaked = html.replace('</body>', '<!-- releases/download --></body>');
+  assert.notEqual(leaked, html);
+  assert.throws(() => assertInstallFiles(leaked), /page contains releases\/download/);
+
+  const urlLine = html.replace(
+    LINUX_INSTALL_LINE,
+    'https://github.com/valentinyeo/endless-testing/releases/download/et/et-x86_64-linux-musl',
+  );
+  assert.notEqual(urlLine, html);
+  assert.throws(() => assertInstallFiles(urlLine), /page contains releases\/download/);
+
+  const noAccess = html.replace(
+    'A GitHub login with access to the repository is required.',
+    'Download the file.',
+  );
+  assert.notEqual(noAccess, html);
+  assert.throws(() => assertInstallFiles(noAccess), /github access sentence missing/);
 });
 
 test('the page does not ask for an OpenRouter key', () => {
