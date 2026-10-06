@@ -88,6 +88,26 @@ function primaryLinks(source) {
   return links;
 }
 
+function asksForOpenRouterKey(source) {
+  return /openrouter[\s\S]{0,48}(api[\s_-]*)?key/i.test(source)
+    || /openrouter_api_key/i.test(source);
+}
+
+function assertNoOpenRouterKey(source) {
+  if (asksForOpenRouterKey(source)) assert.fail('page asks for an OpenRouter key');
+}
+
+function assertLinesSection(source) {
+  const lines = source.match(/<section id="lines">([\s\S]*?)<\/section>/);
+  assert.ok(lines, 'lines section missing');
+  assert.match(lines[1], /<h2>The product writes the challenger lines<\/h2>/);
+  assert.match(lines[1], /You connect Claude, Codex, or ChatGPT\./);
+  assert.match(lines[1], /Endless Testing writes the next lines\./);
+  const connect = source.match(/<section id="connect">([\s\S]*?)<\/section>/);
+  assert.ok(connect, 'connect section missing');
+  assert.match(connect[1], /<h3>API<\/h3>/);
+}
+
 function assertPrimaryTrialGoal(source) {
   const links = primaryLinks(source);
   assert.ok(links.length > 0, 'index has no primary links');
@@ -109,6 +129,20 @@ test('primary links use Start 7-day free trial and reject the shorter label', ()
   const reverted = html.replaceAll('Start 7-day free trial', 'Start 7-day trial');
   assert.notEqual(reverted, html);
   assert.throws(() => assertPrimaryTrialGoal(reverted), /shorter trial label/);
+});
+
+test('the page does not ask for an OpenRouter key', () => {
+  assertNoOpenRouterKey(html);
+  assert.throws(() => assertNoOpenRouterKey('Paste your OpenRouter key'), /OpenRouter key/);
+  assert.throws(() => assertNoOpenRouterKey('Add your OpenRouter API key'), /OpenRouter key/);
+  assertNoOpenRouterKey('Traffic is not sent to OpenRouter.');
+});
+
+test('you connect Claude, Codex, or ChatGPT and the product writes the next lines', () => {
+  assertLinesSection(html);
+  const stripped = html.replace(/<section id="lines">[\s\S]*?<\/section>/, '');
+  assert.notEqual(stripped, html);
+  assert.throws(() => assertLinesSection(stripped), /lines section missing/);
 });
 
 test('landing copy has the required facts and no em dashes', () => {
