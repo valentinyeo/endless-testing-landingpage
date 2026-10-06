@@ -24,6 +24,7 @@ function contentType(filePath) {
   if (filePath.endsWith('.html')) return 'text/html; charset=utf-8';
   if (filePath.endsWith('.js')) return 'text/javascript; charset=utf-8';
   if (filePath.endsWith('.css')) return 'text/css; charset=utf-8';
+  if (filePath.endsWith('.png')) return 'image/png';
   return 'application/octet-stream';
 }
 
@@ -63,6 +64,17 @@ function distance(a, b) {
   return Math.hypot(dx, dy, dz);
 }
 
+function channel(value) {
+  const c = value / 255;
+  return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+}
+
+function contrastRatio(a, b) {
+  const lum = (rgbValue) => 0.2126 * channel(rgbValue[0]) + 0.7152 * channel(rgbValue[1]) + 0.0722 * channel(rgbValue[2]);
+  const [hi, lo] = lum(a) > lum(b) ? [lum(a), lum(b)] : [lum(b), lum(a)];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
 test('landing copy has the required facts and no em dashes', () => {
   assert.equal(html.includes('\u2014'), false);
   assert.equal(html.includes('\u2013'), false);
@@ -81,8 +93,14 @@ test('landing copy has the required facts and no em dashes', () => {
   assert.match(html, /id="dogfood-note">This page runs the Endless Testing SDK\./);
   assert.match(html, /src="https:\/\/api\.endlesstesting\.ai\/api\/sdk\.js" async data-cfasync="false"/);
   assert.match(html, /base: "https:\/\/api\.endlesstesting\.ai"/);
-  assert.equal(249 * 12, 2988);
-  assert.equal((299 - 249) * 12, 600);
+  const billed = html.match(/Billed annually at <strong>\$([\d,]+)\/yr<\/strong>/);
+  assert.ok(billed, 'annual total missing from billing script');
+  assert.equal(Number(billed[1].replaceAll(',', '')), 249 * 12);
+  const save = html.match(/Save \$(\d+)\/yr/);
+  assert.ok(save, 'annual savings missing from billing script');
+  assert.equal(Number(save[1]), (299 - 249) * 12);
+  assert.match(html, /rel="icon" href="\/images\/icon\.png"/);
+  assert.equal(fs.existsSync(path.join(root, 'images/icon.png')), true);
 });
 
 test('agent files and share metadata are on the page', () => {
@@ -135,16 +153,20 @@ describe('landing layout', () => {
     await page.emulateMedia({ colorScheme: 'light' });
     await open();
 
-    const gap = await page.evaluate(() => {
+    const logoBox = await page.evaluate(() => {
       const logo = document.querySelector('.logo');
       const text = [...logo.childNodes].find((node) => node.nodeType === Node.TEXT_NODE);
       const range = document.createRange();
       range.selectNodeContents(text);
       const textBox = range.getBoundingClientRect();
       const mark = logo.querySelector('span').getBoundingClientRect();
-      return mark.left - textBox.right;
+      return {
+        gap: mark.left - textBox.right,
+        line: Math.abs(mark.top - textBox.top),
+      };
     });
-    assert.ok(gap < 2, `logo gap is ${gap}px`);
+    assert.ok(logoBox.gap < 2 && logoBox.gap > -0.5, `logo gap is ${logoBox.gap}px`);
+    assert.ok(logoBox.line < 2, `logo wraps, line delta ${logoBox.line}px`);
 
     const narrow = await page.evaluate(() => ({
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -161,8 +183,12 @@ describe('landing layout', () => {
       const panel = document.getElementById('nav-panel');
       return panel.hasAttribute('hidden')
         && document.getElementById('nav-toggle').getAttribute('aria-expanded') === 'false'
-        && heading.top >= header.bottom - 1;
+        && heading.top >= header.bottom - 1
+        && heading.top <= header.bottom + 180
+        && heading.bottom <= window.innerHeight;
     });
+    await page.goBack();
+    await page.waitForFunction(() => location.hash === '' && window.scrollY < 40);
 
     await page.setViewportSize({ width: 1280, height: 900 });
     await open();
@@ -170,7 +196,9 @@ describe('landing layout', () => {
     await page.waitForFunction(() => {
       const heading = document.querySelector('#pricing h2').getBoundingClientRect();
       const header = document.querySelector('header').getBoundingClientRect();
-      return heading.top >= header.bottom - 1 && heading.bottom > header.bottom;
+      return heading.top >= header.bottom - 1
+        && heading.top <= header.bottom + 180
+        && heading.bottom <= window.innerHeight;
     });
 
     const desktopNav = await page.evaluate(() => {
@@ -259,6 +287,83 @@ describe('landing layout', () => {
 
     const commands = await page.locator('#terminal').innerText();
     assert.match(commands, /\$ et login\n\$ et site add\n\$ et round start\n\$ et status/);
+  });
+
+  test('trial button text stays on the green fill', async () => {
+    async function readButton(selector) {
+      return page.evaluate((selector) => {
+        const el = document.querySelector(selector);
+        const style = getComputedStyle(el);
+        return {
+          color: style.color,
+          bg: style.backgroundColor,
+          padLeft: parseFloat(style.paddingLeft),
+          padRight: parseFloat(style.paddingRight),
+        };
+      }, selector);
+    }
+
+    for (const scheme of ['light', 'dark']) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.setViewportSize({ width: 375, height: 812 });
+      await open();
+      await page.click('#nav-toggle');
+      const mobile = await readButton('#nav-panel .btn');
+      const mobileRatio = contrastRatio(rgb(mobile.color), rgb(mobile.bg));
+      assert.ok(mobileRatio >= 4.5, `${scheme} mobile trial contrast ${mobileRatio.toFixed(2)}`);
+      assert.ok(mobile.padLeft >= 16 && mobile.padRight >= 16, `${scheme} mobile trial padding ${mobile.padLeft} ${mobile.padRight}`);
+
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await open();
+      await page.hover('.nav-links .btn');
+      const desk = await readButton('.nav-links .btn');
+      const deskRatio = contrastRatio(rgb(desk.color), rgb(desk.bg));
+      assert.ok(deskRatio >= 4.5, `${scheme} desktop trial hover contrast ${deskRatio.toFixed(2)}`);
+    }
+  });
+
+  test('wordmark suffix and dogfood note meet contrast', async () => {
+    for (const scheme of ['light', 'dark']) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.setViewportSize({ width: 375, height: 812 });
+      await open();
+      const sample = await page.evaluate(() => {
+        function paint(el) {
+          const color = getComputedStyle(el).color;
+          let node = el;
+          let bg = getComputedStyle(node).backgroundColor;
+          while (node && (bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)')) {
+            node = node.parentElement;
+            bg = node ? getComputedStyle(node).backgroundColor : bg;
+          }
+          return { color, bg };
+        }
+        return {
+          mark: paint(document.querySelector('.logo span')),
+          note: paint(document.getElementById('dogfood-note')),
+        };
+      });
+      for (const [name, colors] of Object.entries(sample)) {
+        const ratio = contrastRatio(rgb(colors.color), rgb(colors.bg));
+        assert.ok(ratio >= 4.5, `${scheme} ${name} contrast ${ratio.toFixed(2)} ${colors.color} on ${colors.bg}`);
+      }
+    }
+  });
+
+  test('same-origin requests do not 404', async () => {
+    const misses = [];
+    const onResponse = (res) => {
+      const url = new URL(res.url());
+      if (url.hostname === '127.0.0.1' && res.status() >= 400) misses.push(`${url.pathname} ${res.status()}`);
+    };
+    page.on('response', onResponse);
+    try {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await open();
+      assert.deepEqual(misses, []);
+    } finally {
+      page.off('response', onResponse);
+    }
   });
 
   test('escape closes the mobile menu', async () => {

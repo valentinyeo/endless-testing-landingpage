@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/images/icon.png" type="image/png">
     <title>endlesstesting.ai. A/B testing for AI generalists</title>
     <meta name="description" content="Run A/B tests on your landing page from Claude, Codex, or ChatGPT through the CLI, MCP, or API.">
     <link rel="canonical" href="https://endlesstesting.ai/">
@@ -54,7 +55,7 @@
             --bg-elev: #ffffff;
             --fg: #141614;
             --muted: #4e564f;
-            --faint: #6d756e;
+            --faint: #666e69;
             --line: #d9ddd6;
             --accent: #12753a;
             --accent-soft: #e5f4ea;
@@ -112,11 +113,11 @@
             backdrop-filter: blur(12px);
         }
         .nav-bar { min-height: 4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-        .logo { text-decoration: none; font-family: "Space Grotesk", sans-serif; font-weight: 700; }
+        .logo { text-decoration: none; font-family: "Space Grotesk", sans-serif; font-weight: 700; white-space: nowrap; }
         .logo span { color: var(--faint); font-weight: 500; }
         .nav-links { display: none; align-items: center; gap: 1.25rem; color: var(--muted); font-size: 0.92rem; font-weight: 500; }
         .nav-links a { text-decoration: none; white-space: nowrap; }
-        .nav-links a:hover { color: var(--fg); }
+        .nav-links a:not(.btn):hover { color: var(--fg); }
         .nav-toggle {
             border: 1px solid var(--line);
             background: var(--bg-elev);
@@ -131,7 +132,7 @@
             display: grid;
             gap: 0.25rem;
         }
-        .nav-panel a { text-decoration: none; color: var(--muted); padding: 0.55rem 0; }
+        .nav-panel a:not(.btn) { text-decoration: none; color: var(--muted); padding: 0.55rem 0; }
         .btn {
             display: inline-flex;
             align-items: center;
@@ -442,8 +443,12 @@
         if (!target) return;
         event.preventDefault();
         closeMenu();
+        if (location.hash !== href) history.pushState(null, '', href);
+        var root = document.documentElement;
+        var previous = root.style.scrollBehavior;
+        root.style.scrollBehavior = 'auto';
         target.scrollIntoView();
-        history.pushState(null, '', href);
+        root.style.scrollBehavior = previous;
       });
       document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') closeMenu();
