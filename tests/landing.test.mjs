@@ -168,8 +168,9 @@ test('primary links use Start 7-day free trial and reject the shorter label', ()
 const INSTALL_FILES = [
   'et-x86_64-linux-musl',
   'et-aarch64-linux-musl',
+  'et-x86_64-macos',
   'et-aarch64-macos',
-  'et-x86_64-windows-gnu',
+  'et-x86_64-windows',
 ];
 
 function asksForGitHubLogin(source) {
@@ -210,10 +211,18 @@ function normalizePage(source) {
   return decodeEntities(source).replace(/[\u200B-\u200D\uFEFF\u2060\u00AD]/g, '');
 }
 
-function containsReleaseDownload(source) {
+function containsNeedle(source, needle) {
   const decoded = normalizePage(source);
-  if (decoded.includes('releases/download')) return true;
-  return decoded.replace(/<[^>]+>/g, '').includes('releases/download');
+  if (decoded.includes(needle)) return true;
+  return decoded.replace(/<[^>]+>/g, '').includes(needle);
+}
+
+function containsReleaseDownload(source) {
+  return containsNeedle(source, 'releases/download');
+}
+
+function containsGhReleaseDownload(source) {
+  return containsNeedle(source, 'gh release download');
 }
 
 function concealedAttrs(attrs) {
@@ -281,26 +290,23 @@ function installParagraph(source) {
   assert.fail('install files missing beside the terminal');
 }
 
-const LINUX_INSTALL_LINE = 'gh release download et --repo valentinyeo/endless-testing --pattern et-x86_64-linux-musl';
+const CURL_INSTALL_LINE = 'curl -fsSL https://api.endlesstesting.ai/install.sh | sh';
 
 function assertInstallFiles(source) {
   if (asksForGitHubLogin(source)) assert.fail('command needs a GitHub login');
   if (containsReleaseDownload(source)) assert.fail('page contains releases/download');
+  if (containsGhReleaseDownload(source)) assert.fail('gh release download remains');
   const text = installParagraph(source);
-  if (!text.includes('gh release download')) assert.fail('gh release download missing');
+  if (!text.includes(CURL_INSTALL_LINE)) assert.fail('curl install line missing');
   for (const name of INSTALL_FILES) {
     if (!hasInstallFile(text, name)) assert.fail(`install file missing: ${name}`);
   }
-  if (!/Each file is the program for that machine\./.test(text)) {
+  if (!/The script picks the file for this machine\./.test(text)) {
     assert.fail('install files missing the machine sentence');
   }
-  if (!/A GitHub login with access to the repository is required\./.test(text)) {
-    assert.fail('github access sentence missing');
-  }
-  if (!text.includes(LINUX_INSTALL_LINE)) assert.fail('gh release download missing');
 }
 
-test('the page names the four et install files beside the terminal', () => {
+test('the page names the five et install files beside the terminal', () => {
   assertInstallFiles(html);
   for (const name of INSTALL_FILES) {
     const stripped = html.replaceAll(name, 'et-missing');
@@ -311,13 +317,13 @@ test('the page names the four et install files beside the terminal', () => {
     assert.throws(() => assertInstallFiles(longer), new RegExp(`install file missing: ${name}`), `${name} longer`);
   }
 
-  const hiddenName = html.replace('et-x86_64-windows-gnu', '<span hidden>et-x86_64-windows-gnu</span>');
+  const hiddenName = html.replace('et-x86_64-windows', '<span hidden>et-x86_64-windows</span>');
   assert.notEqual(hiddenName, html);
-  assert.throws(() => assertInstallFiles(hiddenName), /install file missing: et-x86_64-windows-gnu/);
+  assert.throws(() => assertInstallFiles(hiddenName), /install file missing: et-x86_64-windows/);
 
   const hiddenSentence = html.replace(
-    'Each file is the program for that machine.',
-    '<span hidden>Each file is the program for that machine.</span>',
+    'The script picks the file for this machine.',
+    '<span hidden>The script picks the file for this machine.</span>',
   );
   assert.notEqual(hiddenSentence, html);
   assert.throws(() => assertInstallFiles(hiddenSentence), /machine sentence/);
@@ -327,7 +333,7 @@ test('the page names the four et install files beside the terminal', () => {
   assert.notEqual(moved, html);
   assert.throws(() => assertInstallFiles(moved), /install files missing beside the terminal/);
 
-  const noSentence = html.replace('Each file is the program for that machine.', 'Pick a file.');
+  const noSentence = html.replace('The script picks the file for this machine.', 'Pick a file.');
   assert.notEqual(noSentence, html);
   assert.throws(() => assertInstallFiles(noSentence), /machine sentence/);
 
@@ -337,63 +343,60 @@ test('the page names the four et install files beside the terminal', () => {
   assert.throws(() => assertInstallFiles(`${html}\nGITHUB_TOKEN`), /GitHub login/);
   assert.throws(() => assertInstallFiles(`${html}\nGH_TOKEN`), /GitHub login/);
 
-  const noCmd = html.replace(LINUX_INSTALL_LINE, 'curl -O et-x86_64-linux-musl');
+  const noCmd = html.replace(CURL_INSTALL_LINE, 'curl -O et-x86_64-linux-musl');
   assert.notEqual(noCmd, html);
-  assert.throws(() => assertInstallFiles(noCmd), /gh release download missing/);
+  assert.throws(() => assertInstallFiles(noCmd), /curl install line missing/);
 
   const hiddenCmd = html.replace(
-    LINUX_INSTALL_LINE,
-    `<span hidden>${LINUX_INSTALL_LINE}</span>`,
+    CURL_INSTALL_LINE,
+    `<span hidden>${CURL_INSTALL_LINE}</span>`,
   );
   assert.notEqual(hiddenCmd, html);
-  assert.throws(() => assertInstallFiles(hiddenCmd), /gh release download missing/);
+  assert.throws(() => assertInstallFiles(hiddenCmd), /curl install line missing/);
 
   const leaked = html.replace('</body>', '<!-- releases/download --></body>');
   assert.notEqual(leaked, html);
   assert.throws(() => assertInstallFiles(leaked), /page contains releases\/download/);
 
   const urlLine = html.replace(
-    LINUX_INSTALL_LINE,
+    CURL_INSTALL_LINE,
     'https://github.com/valentinyeo/endless-testing/releases/download/et/et-x86_64-linux-musl',
   );
   assert.notEqual(urlLine, html);
   assert.throws(() => assertInstallFiles(urlLine), /page contains releases\/download/);
 
-  const noAccess = html.replace(
-    'A GitHub login with access to the repository is required.',
-    'Download the file.',
+  const oldCmd = html.replace(
+    CURL_INSTALL_LINE,
+    'gh release download et --repo valentinyeo/endless-testing --pattern et-x86_64-linux-musl',
   );
-  assert.notEqual(noAccess, html);
-  assert.throws(() => assertInstallFiles(noAccess), /github access sentence missing/);
+  assert.notEqual(oldCmd, html);
+  assert.throws(() => assertInstallFiles(oldCmd), /gh release download remains/);
 
-  const hiddenAccess = html.replace(
-    'A GitHub login with access to the repository is required.',
-    '<span Hidden>A GitHub login with access to the repository is required.</span>',
-  );
-  assert.notEqual(hiddenAccess, html);
-  assert.throws(() => assertInstallFiles(hiddenAccess), /github access sentence missing/);
+  const keptCmd = html.replace('</body>', 'gh release download</body>');
+  assert.notEqual(keptCmd, html);
+  assert.throws(() => assertInstallFiles(keptCmd), /gh release download remains/);
 
   const hiddenCmdCase = html.replace(
-    LINUX_INSTALL_LINE,
-    `<span Hidden>${LINUX_INSTALL_LINE}</span>`,
+    CURL_INSTALL_LINE,
+    `<span Hidden>${CURL_INSTALL_LINE}</span>`,
   );
   assert.notEqual(hiddenCmdCase, html);
-  assert.throws(() => assertInstallFiles(hiddenCmdCase), /gh release download missing/);
+  assert.throws(() => assertInstallFiles(hiddenCmdCase), /curl install line missing/);
 
   const hiddenParagraph = html.replace('<p class="install-files">', '<p Hidden class="install-files">');
   assert.notEqual(hiddenParagraph, html);
   assert.throws(() => assertInstallFiles(hiddenParagraph), /install files missing beside the terminal/);
 
   const noneCmd = html.replace(
-    `<code>${LINUX_INSTALL_LINE}</code>`,
-    `<code style="display:none">${LINUX_INSTALL_LINE}</code>`,
+    `<code>${CURL_INSTALL_LINE}</code>`,
+    `<code style="display:none">${CURL_INSTALL_LINE}</code>`,
   );
   assert.notEqual(noneCmd, html);
-  assert.throws(() => assertInstallFiles(noneCmd), /gh release download missing/);
+  assert.throws(() => assertInstallFiles(noneCmd), /curl install line missing/);
 
-  const wrongPattern = html.replace('--pattern et-x86_64-linux-musl', '--pattern et-aarch64-macos');
-  assert.notEqual(wrongPattern, html);
-  assert.throws(() => assertInstallFiles(wrongPattern), /gh release download missing/);
+  const wrongHost = html.replace('https://api.endlesstesting.ai/install.sh', 'https://api.endlesstesting.ai/install.txt');
+  assert.notEqual(wrongHost, html);
+  assert.throws(() => assertInstallFiles(wrongHost), /curl install line missing/);
 
   const entityUrl = html.replace('</body>', '<!-- releases&#47;download --></body>');
   assert.notEqual(entityUrl, html);
@@ -800,11 +803,11 @@ describe('landing layout', () => {
         assert.ok(info.width > 100, where);
         assert.ok(info.left >= -1 && info.right <= info.innerWidth + 1, `${where} install files clipped`);
         for (const name of INSTALL_FILES) assert.ok(hasInstallFile(info.text, name), `${where} ${name}`);
-        assert.match(info.text, /Each file is the program for that machine\./);
-        assert.ok(info.text.includes(LINUX_INSTALL_LINE), `${where} install command not visible`);
-        assert.match(info.text, /A GitHub login with access to the repository is required\./);
+        assert.match(info.text, /The script picks the file for this machine\./);
+        assert.ok(info.text.includes(CURL_INSTALL_LINE), `${where} install command not visible`);
+        assert.equal(info.pageText.includes('gh release download'), false, `${where} shows gh release download`);
         assert.equal(info.pageText.includes('releases/download'), false, `${where} shows releases/download`);
-        assert.equal(info.codeText.trim(), LINUX_INSTALL_LINE, where);
+        assert.equal(info.codeText.trim(), CURL_INSTALL_LINE, where);
         assert.notEqual(info.codeDisplay, 'none', where);
         assert.equal(info.codeVisibility, 'visible', where);
         assert.ok(info.codeOpacity >= 0.99, `${where} command opacity ${info.codeOpacity}`);
