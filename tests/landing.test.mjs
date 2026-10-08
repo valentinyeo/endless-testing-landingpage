@@ -370,15 +370,49 @@ function assertDogfoodRounds(source) {
   if (noteGivesLift(note)) assert.fail('dogfood note gives a lift');
 }
 
+function terminalRegion(source) {
+  const openRe = /<div\b([^>]*)>/gi;
+  let open;
+  while ((open = openRe.exec(source))) {
+    if (elementFrom('div', open[1]).id !== 'terminal') continue;
+    const start = open.index + open[0].length;
+    let depth = 1;
+    const tagRe = /<!--[\s\S]*?-->|<\/?div\b[^>]*>/gi;
+    tagRe.lastIndex = start;
+    let match;
+    while ((match = tagRe.exec(source))) {
+      if (match[0].startsWith('<!--')) continue;
+      depth += match[0].startsWith('</') ? -1 : 1;
+      if (depth === 0) return { attrs: open[1], inner: source.slice(start, match.index) };
+    }
+    return null;
+  }
+  return null;
+}
+
 function assertStatusContinues(source) {
-  const terminal = source.match(/id="terminal"[\s\S]*?<code>([\s\S]*?)<\/code>/);
-  assert.ok(terminal, 'terminal sample missing');
-  if (terminal[1].includes('winner: Clear price')) {
+  const region = terminalRegion(source);
+  assert.ok(region, 'terminal sample missing');
+  if (containsNeedle(region.inner, 'winner: Clear price')) {
     assert.fail('winner: Clear price is in the terminal');
   }
-  const text = terminal[1]
-    .replace(/<([a-zA-Z][\w:-]*)\b[^>]*\shidden\b[^>]*>[\s\S]*?<\/\1>/g, '')
+  const rules = concealingRules(pageCss(source.replace(/<!--[\s\S]*?-->/g, '')));
+  const terminalEl = elementFrom('div', region.attrs);
+  if (concealedAttrs(region.attrs) || chainIsHidden(rules, [terminalEl])) {
+    assert.fail('decision: continue missing from terminal');
+  }
+  const visible = stripConcealed(
+    region.inner
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<template\b[^>]*>[\s\S]*?<\/template>/gi, '')
+      .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, ''),
+    (tag, attrs) => chainIsHidden(rules, [elementFrom(tag, attrs), terminalEl]),
+  )
+    .replace(/<br\b[^>]*>/gi, '\n')
     .replace(/<[^>]+>/g, '');
+  const text = normalizePage(visible);
   const marker = '$ et status';
   const at = text.indexOf(marker);
   const after = at < 0 ? '' : text.slice(at + marker.length);
@@ -981,6 +1015,85 @@ test('et status prints decision: continue and does not name Clear price', () => 
   );
   assert.notEqual(before, html);
   assert.throws(() => assertStatusContinues(before), /decision: continue missing from terminal/);
+
+  const encodedDecision = html.replace(
+    '<span class="dim">decision: continue</span>',
+    '<span class="dim">decision:&nbsp;continue</span>',
+  );
+  assert.notEqual(encodedDecision, html);
+  assertStatusContinues(encodedDecision);
+
+  const splitDecision = html.replace(
+    '<span class="dim">decision: continue</span>',
+    '<span class="dim">decision:</span> continue',
+  );
+  assert.notEqual(splitDecision, html);
+  assertStatusContinues(splitDecision);
+
+  const brokenLine = html.replace(
+    '<span class="prompt">$</span> et status\n<span class="dim">decision: continue</span>',
+    '<span class="prompt">$</span> et status<br><span class="dim">decision: continue</span>',
+  );
+  assert.notEqual(brokenLine, html);
+  assertStatusContinues(brokenLine);
+
+  const winnerForms = [
+    ['nbsp', '<span class="dim">winner: Clear&nbsp;price</span>'],
+    ['numeric space', '<span class="dim">winner: Clear&#32;price</span>'],
+    ['hex nbsp', '<span class="dim">winner: Clear&#xa0;price</span>'],
+    ['double encoded', '<span class="dim">winner: Clear&amp;nbsp;price</span>'],
+    ['split tag', '<span class="dim">winner: Clear</span> price'],
+    ['zero width', '<span class="dim">winner: Clear\u200b price</span>'],
+    ['double space', '<span class="dim">winner:  Clear price</span>'],
+    ['capital', '<span class="dim">Winner: Clear price</span>'],
+  ];
+  for (const [name, sample] of winnerForms) {
+    const encoded = html.replace(
+      '<span class="dim">decision: continue</span>',
+      `<span class="dim">decision: continue</span>\n${sample}`,
+    );
+    assert.notEqual(encoded, html, name);
+    assert.throws(() => assertStatusContinues(encoded), /winner: Clear price is in the terminal/, name);
+  }
+
+  const afterCode = html.replace(
+    '<span class="dim">decision: continue</span></code>',
+    '<span class="dim">decision: continue</span></code><span>winner: Clear price</span>',
+  );
+  assert.notEqual(afterCode, html);
+  assert.throws(() => assertStatusContinues(afterCode), /winner: Clear price is in the terminal/);
+
+  const commentedWinner = html.replace(
+    '<span class="dim">decision: continue</span>',
+    '<span class="dim">decision: continue</span><!-- winner: Clear price -->',
+  );
+  assert.notEqual(commentedWinner, html);
+  assert.throws(() => assertStatusContinues(commentedWinner), /winner: Clear price is in the terminal/);
+
+  const concealedDecision = [
+    ['display none', '<span class="dim" style="display:none">decision: continue</span>'],
+    ['visibility', '<span class="dim" style="visibility:hidden">decision: continue</span>'],
+    ['opacity', '<span class="dim" style="opacity:0">decision: continue</span>'],
+    ['Hidden', '<span class="dim" Hidden>decision: continue</span>'],
+    ['script', '<script>decision: continue</script>'],
+    ['template', '<template>decision: continue</template>'],
+  ];
+  for (const [name, sample] of concealedDecision) {
+    const concealed = html.replace('<span class="dim">decision: continue</span>', sample);
+    assert.notEqual(concealed, html, name);
+    assert.throws(() => assertStatusContinues(concealed), /decision: continue missing from terminal/, name);
+  }
+
+  const dimRule = html.replace(
+    '.dim { color: var(--code-dim); }',
+    '.dim { color: var(--code-dim); display: none; }',
+  );
+  assert.notEqual(dimRule, html);
+  assert.throws(() => assertStatusContinues(dimRule), /decision: continue missing from terminal/);
+
+  const hiddenTerminal = html.replace('.terminal {', '.terminal { display: none;');
+  assert.notEqual(hiddenTerminal, html);
+  assert.throws(() => assertStatusContinues(hiddenTerminal), /decision: continue missing from terminal/);
 });
 
 test('a still-running round prints decision: continue and names no winner', () => {
@@ -1543,9 +1656,9 @@ describe('landing layout', () => {
     const apart = distance(rgb(dark.body), rgb(dark.panel));
     assert.ok(apart >= 20, `terminal background ${dark.panel} blends into ${dark.body} (${apart})`);
 
-    const commands = await page.locator('#terminal').innerText();
+    const commands = normalizePage(await page.locator('#terminal').innerText());
     assert.match(commands, /\$ et login\n\$ et site add\n\$ et round start\n\$ et status\ndecision: continue/);
-    assert.doesNotMatch(commands, /winner: Clear price/);
+    assert.equal(commands.toLowerCase().replace(/\s+/g, ' ').includes('winner: clear price'), false);
 
     const winner = await page.evaluate(() => {
       const el = document.querySelector('.terminal .dim');
@@ -1564,7 +1677,7 @@ describe('landing layout', () => {
         termRight: term.right,
       };
     });
-    assert.equal(winner.text, 'decision: continue');
+    assert.equal(normalizePage(winner.text).trim(), 'decision: continue');
     assert.equal(winner.display, 'inline');
     assert.equal(winner.visibility, 'visible');
     assert.ok(winner.opacity >= 0.99, `winner opacity ${winner.opacity}`);
@@ -1629,8 +1742,12 @@ describe('landing layout', () => {
         const ratio = contrastRatio(rgb(info.color), rgb(info.bg));
         assert.ok(ratio >= 4.5, `${scheme} ${width} contrast ${ratio.toFixed(2)} ${info.color} on ${info.bg}`);
         assert.equal(info.overflow, 0, `${scheme} ${width} page overflow ${info.overflow}`);
-        assert.equal(info.winner, 'decision: continue');
-        assert.equal(info.heroText.includes('winner: Clear price'), false, `${scheme} ${width} hero names Clear price`);
+        assert.equal(normalizePage(info.winner).trim(), 'decision: continue');
+        assert.equal(
+          normalizePage(info.heroText).toLowerCase().replace(/\s+/g, ' ').includes('winner: clear price'),
+          false,
+          `${scheme} ${width} hero names Clear price`,
+        );
         assert.equal(info.noteHasDecision, false, `${scheme} ${width} dogfood note has the status sentence`);
         assert.equal(claimsLiveRoundWinner(info.heroText), false, `${scheme} ${width} hero claims a live round winner`);
       }
