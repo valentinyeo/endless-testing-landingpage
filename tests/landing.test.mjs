@@ -101,22 +101,227 @@ function assertNoOpenRouterKey(source) {
   if (asksForOpenRouterKey(source)) assert.fail('page asks for an OpenRouter key');
 }
 
+const SDK_SENTENCE = 'This page runs the Endless Testing SDK.';
+const HOME_SENTENCE = 'The homepage is round endlesstesting-100.';
+const SITE_SENTENCE = 'valentinyeo.com is round valentinyeo-2.';
+
+function cssDeclConceals(body) {
+  return concealedAttrs(`style="${body.replaceAll('"', "'")}"`);
+}
+
+function elementFrom(tag, attrs) {
+  const classAttr = attrs.match(/\bclass\s*=\s*["']([^"']*)["']/i);
+  const idAttr = attrs.match(/\bid\s*=\s*["']([^"']*)["']/i);
+  return {
+    tag: tag.toLowerCase(),
+    id: idAttr ? idAttr[1].toLowerCase() : '',
+    classes: new Set(classAttr ? classAttr[1].toLowerCase().split(/\s+/).filter(Boolean) : []),
+  };
+}
+
+function elementMatches(el, compound) {
+  const text = compound.trim().toLowerCase();
+  if (!text || /[:[*]/.test(text)) return false;
+  let tag = '';
+  let id = '';
+  const classes = [];
+  for (let i = 0; i < text.length;) {
+    if (text[i] === '#') {
+      const name = /^[\w-]+/.exec(text.slice(i + 1));
+      if (!name || id) return false;
+      id = name[0];
+      i += name[0].length + 1;
+    } else if (text[i] === '.') {
+      const name = /^[\w-]+/.exec(text.slice(i + 1));
+      if (!name) return false;
+      classes.push(name[0]);
+      i += name[0].length + 1;
+    } else if (/[a-z]/i.test(text[i])) {
+      const name = /^[a-z][\w-]*/i.exec(text.slice(i));
+      if (!name || tag) return false;
+      tag = name[0].toLowerCase();
+      i += name[0].length;
+    } else return false;
+  }
+  if (tag && tag !== el.tag) return false;
+  if (id && id !== el.id) return false;
+  if (!tag && !id && classes.length === 0) return false;
+  return classes.every((name) => el.classes.has(name));
+}
+
+function parseSimpleSelector(selector) {
+  const src = selector.trim().toLowerCase();
+  if (!src || src.startsWith('@')) return null;
+  const items = [];
+  let buf = '';
+  const flush = () => {
+    if (!buf.trim()) return false;
+    items.push({ kind: 'sel', value: buf.trim() });
+    buf = '';
+    return true;
+  };
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (ch === '>') {
+      if (!flush()) return null;
+      items.push({ kind: 'child' });
+      while (src[i + 1] === ' ') i++;
+    } else if (/\s/.test(ch)) {
+      if (!flush()) return null;
+      items.push({ kind: 'desc' });
+      while (i + 1 < src.length && /\s/.test(src[i + 1])) i++;
+    } else buf += ch;
+  }
+  if (!flush()) return null;
+  return items;
+}
+
+function selectorMatches(items, chain, start) {
+  let item = items.length - 1;
+  let at = start;
+  if (!items[item] || items[item].kind !== 'sel') return false;
+  if (!elementMatches(chain[at], items[item].value)) return false;
+  item--;
+  while (item >= 0) {
+    const comb = items[item];
+    if (!comb || comb.kind === 'sel') return false;
+    item--;
+    const next = items[item];
+    if (!next || next.kind !== 'sel') return false;
+    if (comb.kind === 'child') {
+      at += 1;
+      if (at >= chain.length || !elementMatches(chain[at], next.value)) return false;
+    } else {
+      let found = false;
+      for (let cursor = at + 1; cursor < chain.length; cursor++) {
+        if (elementMatches(chain[cursor], next.value)) {
+          at = cursor;
+          found = true;
+          break;
+        }
+      }
+      if (!found) return false;
+    }
+    item--;
+  }
+  return true;
+}
+
+function pageCss(source) {
+  return [...source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)]
+    .map((match) => match[1])
+    .join('\n')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+}
+
+function concealingRules(css) {
+  const rules = [];
+  const re = /([^{}]+)\{([^{}]*)\}/g;
+  let match;
+  while ((match = re.exec(css))) {
+    if (!cssDeclConceals(match[2])) continue;
+    for (const part of match[1].split(',')) {
+      const items = parseSimpleSelector(part);
+      if (items) rules.push(items);
+    }
+  }
+  return rules;
+}
+
+function chainIsHidden(rules, chain) {
+  return rules.some((items) => chain.some((_, start) => selectorMatches(items, chain, start)));
+}
+
+const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
+
+function dogfoodElements(source) {
+  const clean = source
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
+  const re = /<(\/?)([a-zA-Z][\w:-]*)\b([^>]*)>/g;
+  const stack = [];
+  const notes = [];
+  let noteStart = -1;
+  let noteDepth = 0;
+  let noteAttrs = '';
+  let noteChain = null;
+  let match;
+  while ((match = re.exec(clean))) {
+    const closing = match[1] === '/';
+    const tag = match[2].toLowerCase();
+    const attrs = match[3];
+    if (closing) {
+      if (noteStart >= 0 && tag === 'p') {
+        if (noteDepth === 0) {
+          notes.push({ attrs: noteAttrs, chain: noteChain, inner: clean.slice(noteStart, match.index) });
+          noteStart = -1;
+        } else noteDepth--;
+      }
+      for (let i = stack.length - 1; i >= 0; i--) {
+        if (stack[i].tag === tag) {
+          stack.length = i;
+          break;
+        }
+      }
+      continue;
+    }
+    const el = elementFrom(tag, attrs);
+    if (tag === 'p' && el.id === 'dogfood-note' && noteStart < 0) {
+      noteAttrs = attrs;
+      noteChain = [el, ...stack.slice().reverse()];
+      noteStart = re.lastIndex;
+      noteDepth = 0;
+    } else if (noteStart >= 0 && tag === 'p') noteDepth++;
+    if (!VOID_TAGS.has(tag) && !match[0].endsWith('/>')) stack.push(el);
+  }
+  return notes;
+}
+
+function hasBounded(text, sentence) {
+  let from = 0;
+  while (from < text.length) {
+    const idx = text.indexOf(sentence, from);
+    if (idx < 0) return false;
+    const before = idx > 0 ? text[idx - 1] : '';
+    const after = text[idx + sentence.length] || '';
+    const beforeOk = before === '' || !/[A-Za-z0-9-]/.test(before);
+    const afterOk = after === '' || !/[A-Za-z0-9-]/.test(after);
+    if (beforeOk && afterOk) return true;
+    from = idx + sentence.length;
+  }
+  return false;
+}
+
+function hasSlug(text, slug) {
+  return new RegExp(`(?<![A-Za-z0-9-])${slug}(?![A-Za-z0-9-])`).test(text);
+}
+
+function dogfoodNoteText(source) {
+  const uncommented = source.replace(/<!--[\s\S]*?-->/g, '');
+  const rules = concealingRules(pageCss(uncommented));
+  const notes = dogfoodElements(source);
+  if (notes.length !== 1) assert.fail('dogfood note missing');
+  const note = notes[0];
+  if (concealedAttrs(note.attrs) || chainIsHidden(rules, note.chain)) assert.fail('dogfood note missing');
+  const visible = stripConcealed(note.inner, (tag, attrs) => {
+    const chain = [elementFrom(tag, attrs), ...note.chain];
+    return chainIsHidden(rules, chain);
+  })
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<template\b[^>]*>[\s\S]*?<\/template>/gi, '');
+  return normalizePage(visible.replace(/<br\b[^>]*>/gi, ' ').replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim();
+}
+
 function assertDogfoodRounds(source) {
-  const match = source.match(/<p id="dogfood-note">([\s\S]*?)<\/p>/);
-  if (!match) assert.fail('dogfood note missing');
-  const note = match[1];
-  if (!note.includes('This page runs the Endless Testing SDK.')) {
-    assert.fail('dogfood note dropped the SDK line');
-  }
-  if (!note.includes('endlesstesting-100')) assert.fail('dogfood note missing round endlesstesting-100');
-  if (!note.includes('valentinyeo-2')) assert.fail('dogfood note missing round valentinyeo-2');
-  if (!note.includes('The homepage is round endlesstesting-100.')) {
-    assert.fail('dogfood note does not name the homepage round');
-  }
-  if (!note.includes('valentinyeo.com is round valentinyeo-2.')) {
-    assert.fail('dogfood note does not name the valentinyeo.com round');
-  }
-  if (/\bwinner\b/i.test(note)) assert.fail('dogfood note claims a winner');
+  const note = dogfoodNoteText(source);
+  if (!hasBounded(note, SDK_SENTENCE)) assert.fail('dogfood note dropped the SDK line');
+  if (!hasSlug(note, 'endlesstesting-100')) assert.fail('dogfood note missing round endlesstesting-100');
+  if (!hasSlug(note, 'valentinyeo-2')) assert.fail('dogfood note missing round valentinyeo-2');
+  if (!hasBounded(note, HOME_SENTENCE)) assert.fail('dogfood note does not name the homepage round');
+  if (!hasBounded(note, SITE_SENTENCE)) assert.fail('dogfood note does not name the valentinyeo.com round');
+  if (/\bwinners?\b|\bwinning\b|\bwins\b|\bwon\b/i.test(note)) assert.fail('dogfood note claims a winner');
 }
 
 function terminalCode(source) {
@@ -268,7 +473,7 @@ function concealedAttrs(attrs) {
   return false;
 }
 
-function stripConcealed(fragment) {
+function stripConcealed(fragment, extraHide) {
   const openRe = /<([a-zA-Z][\w:-]*)\b([^>]*)>/g;
   let cur = fragment;
   for (let pass = 0; pass < 20; pass++) {
@@ -278,7 +483,7 @@ function stripConcealed(fragment) {
     let changed = false;
     let match;
     while ((match = openRe.exec(cur))) {
-      if (!concealedAttrs(match[2])) continue;
+      if (!concealedAttrs(match[2]) && !(extraHide && extraHide(match[1], match[2]))) continue;
       const closeRe = new RegExp(`<(/?)${match[1]}\\b[^>]*>`, 'gi');
       closeRe.lastIndex = openRe.lastIndex;
       let depth = 1;
@@ -673,6 +878,108 @@ test('dogfood note names the two live rounds', () => {
   assert.throws(() => assertDogfoodRounds(dropSite), /valentinyeo-2/);
   const claim = html.replace(tagged, '<p id="dogfood-note">' + note + ' The winner is the homepage.</p>');
   assert.throws(() => assertDogfoodRounds(claim), /winner/);
+
+  const rounds = `${HOME_SENTENCE} ${SITE_SENTENCE}`;
+  for (const wrap of [
+    (inner) => `<span hidden>${inner}</span>`,
+    (inner) => `<span style="display:none">${inner}</span>`,
+    (inner) => `<span style="visibility:hidden">${inner}</span>`,
+    (inner) => `<span style="opacity:0">${inner}</span>`,
+    (inner) => `<span style="font-size:0">${inner}</span>`,
+    (inner) => `<span style="color:transparent">${inner}</span>`,
+    (inner) => `<span style="position:absolute;left:-9999px">${inner}</span>`,
+    (inner) => `<!-- ${inner} -->`,
+    (inner) => `<script>${inner}</script>`,
+  ]) {
+    const concealed = html.replace(tagged, `<p id="dogfood-note">${SDK_SENTENCE} ${wrap(rounds)}</p>`);
+    assert.notEqual(concealed, html);
+    assert.throws(() => assertDogfoodRounds(concealed), /endlesstesting-100/);
+  }
+
+  const decoy = html.replace(tagged, `<!-- ${tagged} --><p id="dogfood-note">${SDK_SENTENCE}</p>`);
+  assert.notEqual(decoy, html);
+  assert.throws(() => assertDogfoodRounds(decoy), /endlesstesting-100/);
+
+  const hiddenP = html.replace('<p id="dogfood-note">', '<p id="dogfood-note" hidden>');
+  assert.notEqual(hiddenP, html);
+  assert.throws(() => assertDogfoodRounds(hiddenP), /dogfood note missing/);
+  const noneP = html.replace('<p id="dogfood-note">', '<p id="dogfood-note" style="display:none">');
+  assert.notEqual(noneP, html);
+  assert.throws(() => assertDogfoodRounds(noneP), /dogfood note missing/);
+
+  for (const decl of ['display: none', 'visibility: hidden', 'opacity: 0', 'font-size: 0', 'color: transparent']) {
+    const hiddenCss = html.replace(
+      '#dogfood-note { margin-top: 0.4rem; }',
+      `#dogfood-note { margin-top: 0.4rem; ${decl}; }`,
+    );
+    assert.notEqual(hiddenCss, html, decl);
+    assert.throws(() => assertDogfoodRounds(hiddenCss), /dogfood note missing/, decl);
+  }
+
+  const unusedClass = html.replace(
+    '#dogfood-note { margin-top: 0.4rem; }',
+    '#dogfood-note { margin-top: 0.4rem; }\n        .gone { display: none; }',
+  );
+  assert.notEqual(unusedClass, html);
+  assertDogfoodRounds(unusedClass);
+  const classHide = unusedClass.replace('<p id="dogfood-note">', '<p id="dogfood-note" class="gone">');
+  assert.notEqual(classHide, unusedClass);
+  assert.throws(() => assertDogfoodRounds(classHide), /dogfood note missing/);
+  const spanGone = unusedClass.replace(
+    tagged,
+    `<p id="dogfood-note">${SDK_SENTENCE} <span class="gone">${HOME_SENTENCE} ${SITE_SENTENCE}</span></p>`,
+  );
+  assert.notEqual(spanGone, unusedClass);
+  assert.throws(() => assertDogfoodRounds(spanGone), /endlesstesting-100/);
+  const wrapHide = html.replace(
+    '.wrap { width: min(1080px, calc(100% - 2rem)); margin-inline: auto; }',
+    '.wrap { width: min(1080px, calc(100% - 2rem)); margin-inline: auto; font-size: 0; }',
+  );
+  assert.notEqual(wrapHide, html);
+  assert.throws(() => assertDogfoodRounds(wrapHide), /dogfood note missing/);
+  const childMiss = html.replace(
+    '#dogfood-note { margin-top: 0.4rem; }',
+    '#dogfood-note { margin-top: 0.4rem; }\n        footer > p { display: none; }',
+  );
+  assert.notEqual(childMiss, html);
+  assertDogfoodRounds(childMiss);
+
+  for (const claimText of [
+    'The &#119;inner is the homepage.',
+    'The &#x77;inner is the homepage.',
+    'The &amp;#119;inner is the homepage.',
+    'The win\u200bner is the homepage.',
+    'The winners are the homepage.',
+    'The homepage is winning.',
+    'The homepage wins.',
+    'The homepage won.',
+  ]) {
+    const claimed = html.replace(tagged, `<p id="dogfood-note">${note} ${claimText}</p>`);
+    assert.notEqual(claimed, html, claimText);
+    assert.throws(() => assertDogfoodRounds(claimed), /winner/, claimText);
+  }
+
+  const dotted = html.replace(
+    tagged,
+    `<p id="dogfood-note">${SDK_SENTENCE} The homepage is round endlesstesting-100.9. ${SITE_SENTENCE}</p>`,
+  );
+  assert.notEqual(dotted, html);
+  assert.throws(() => assertDogfoodRounds(dotted), /homepage round/);
+  const siteDotted = html.replace(
+    tagged,
+    `<p id="dogfood-note">${SDK_SENTENCE} ${HOME_SENTENCE} valentinyeo.com is round valentinyeo-2.9.</p>`,
+  );
+  assert.notEqual(siteDotted, html);
+  assert.throws(() => assertDogfoodRounds(siteDotted), /valentinyeo\.com round/);
+  const swapped = html.replace(
+    tagged,
+    `<p id="dogfood-note">${SDK_SENTENCE} The homepage is round valentinyeo-2. valentinyeo.com is round endlesstesting-100.</p>`,
+  );
+  assert.notEqual(swapped, html);
+  assert.throws(() => assertDogfoodRounds(swapped), /homepage round/);
+  const droppedSdk = html.replace(tagged, `<p id="dogfood-note">${HOME_SENTENCE} ${SITE_SENTENCE}</p>`);
+  assert.notEqual(droppedSdk, html);
+  assert.throws(() => assertDogfoodRounds(droppedSdk), /SDK/);
 });
 
 test('agent files and share metadata are on the page', () => {
@@ -1031,18 +1338,32 @@ describe('landing layout', () => {
       await open();
       const sample = await page.evaluate(() => {
         function paint(el) {
-          const color = getComputedStyle(el).color;
+          const style = getComputedStyle(el);
+          const color = style.color;
           let node = el;
           let bg = getComputedStyle(node).backgroundColor;
           while (node && (bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)')) {
             node = node.parentElement;
             bg = node ? getComputedStyle(node).backgroundColor : bg;
           }
-          return { color, bg };
+          const rect = el.getBoundingClientRect();
+          return {
+            color,
+            bg,
+            text: el.innerText,
+            display: style.display,
+            visibility: style.visibility,
+            opacity: Number(style.opacity),
+            fontSize: parseFloat(style.fontSize),
+            width: rect.width,
+            height: rect.height,
+          };
         }
+        const noteEl = document.getElementById('dogfood-note');
+        noteEl.scrollIntoView();
         return {
           mark: paint(document.querySelector('.logo span')),
-          note: paint(document.getElementById('dogfood-note')),
+          note: paint(noteEl),
           winner: paint(document.querySelector('.terminal .dim')),
         };
       });
@@ -1050,6 +1371,16 @@ describe('landing layout', () => {
         const ratio = contrastRatio(rgb(colors.color), rgb(colors.bg));
         assert.ok(ratio >= 4.5, `${scheme} ${name} contrast ${ratio.toFixed(2)} ${colors.color} on ${colors.bg}`);
       }
+      const note = sample.note;
+      assert.match(note.text, /This page runs the Endless Testing SDK\./);
+      assert.match(note.text, /The homepage is round endlesstesting-100\./);
+      assert.match(note.text, /valentinyeo\.com is round valentinyeo-2\./);
+      assert.doesNotMatch(note.text, /\bwinners?\b|\bwinning\b|\bwins\b|\bwon\b/i);
+      assert.notEqual(note.display, 'none', `${scheme} dogfood note display`);
+      assert.equal(note.visibility, 'visible', `${scheme} dogfood note visibility`);
+      assert.ok(note.opacity >= 0.99, `${scheme} dogfood note opacity ${note.opacity}`);
+      assert.ok(note.fontSize >= 12, `${scheme} dogfood note font ${note.fontSize}`);
+      assert.ok(note.width > 0 && note.height > 0, `${scheme} dogfood note box ${note.width}x${note.height}`);
     }
   });
 
