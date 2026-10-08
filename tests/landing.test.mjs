@@ -426,39 +426,107 @@ function assertStatusContinues(source) {
 
 const ALLOWED_LOGIN_LINES = new Set(['et login --email', 'et login --code']);
 
+function terminalBgPaint(body) {
+  return /(?<![\w-])color\s*:\s*(?:var\(\s*--code\s*\)|#(?:121612|1a211c))(?![-\w])/i.test(body);
+}
+
+function terminalPaintedAway(attrs) {
+  const style = attrs.match(/\bstyle\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i);
+  const value = style ? (style[1] ?? style[2] ?? style[3] ?? '') : '';
+  return terminalBgPaint(value);
+}
+
+function terminalHideRules(css) {
+  const rules = [];
+  const re = /([^{}]+)\{([^{}]*)\}/g;
+  let match;
+  while ((match = re.exec(css))) {
+    if (!cssDeclConceals(match[2]) && !terminalBgPaint(match[2])) continue;
+    for (const part of match[1].split(',')) {
+      const items = parseSimpleSelector(part);
+      if (items) rules.push(items);
+    }
+  }
+  return rules;
+}
+
+function trimAscii(value) {
+  return value.replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, '');
+}
+
+function assertLoginText(text) {
+  const login = [];
+  for (const line of text.split('\n')) {
+    const body = trimAscii(line).replace(/^\$[ \t]*/, '');
+    if (!body) continue;
+    const folded = body
+      .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
+      .replace(/[\u200B-\u200D\uFEFF\u2060\u00AD]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (/^et login\b/i.test(folded)) login.push(body);
+  }
+  if (login.length === 0) assert.fail('terminal login line missing');
+  for (const line of login) {
+    if (!ALLOWED_LOGIN_LINES.has(line)) assert.fail('terminal login line needs --email or --code');
+  }
+}
+
+function terminalVisibleText(fragment, ancestors, rules) {
+  const clean = fragment.replace(/<!--[\s\S]*?-->/g, '');
+  const re = /<(\/?)([a-zA-Z][\w:-]*)\b([^>]*)>|([^<]+)/g;
+  const stack = [];
+  const hiddenDepth = [];
+  let out = '';
+  let match;
+  while ((match = re.exec(clean))) {
+    if (match[4] !== undefined) {
+      if (hiddenDepth.length === 0) out += match[4];
+      continue;
+    }
+    const closing = match[1] === '/';
+    const tag = match[2].toLowerCase();
+    const attrs = match[3] || '';
+    if (!closing && RAW_SECTION_TAGS.has(tag)) {
+      const end = clean.slice(re.lastIndex).search(new RegExp(`</${tag}\\s*>`, 'i'));
+      if (end < 0) break;
+      const gt = clean.indexOf('>', re.lastIndex + end);
+      re.lastIndex = gt < 0 ? clean.length : gt + 1;
+      continue;
+    }
+    if (closing) {
+      for (let i = stack.length - 1; i >= 0; i--) {
+        if (stack[i].tag === tag) {
+          stack.length = i;
+          break;
+        }
+      }
+      while (hiddenDepth.length && hiddenDepth[hiddenDepth.length - 1] > stack.length) hiddenDepth.pop();
+      continue;
+    }
+    if (tag === 'br') {
+      if (hiddenDepth.length === 0) out += '\n';
+      continue;
+    }
+    const el = elementFrom(tag, attrs);
+    const chain = [el, ...stack.slice().reverse(), ...ancestors];
+    const hide = concealedAttrs(attrs) || terminalPaintedAway(attrs) || chainIsHidden(rules, chain) || HIDDEN_TEXT_TAGS.has(tag);
+    if (VOID_TAGS.has(tag) || /\/\s*>$/.test(match[0])) continue;
+    stack.push(el);
+    if (hide || hiddenDepth.length > 0) hiddenDepth.push(stack.length);
+  }
+  return out;
+}
+
 function assertTerminalLogin(source) {
   const region = terminalRegion(source);
   assert.ok(region, 'terminal sample missing');
-  const rules = concealingRules(pageCss(source.replace(/<!--[\s\S]*?-->/g, '')));
+  const rules = terminalHideRules(pageCss(source.replace(/<!--[\s\S]*?-->/g, '')));
   const terminalEl = elementFrom('div', region.attrs);
-  if (concealedAttrs(region.attrs) || chainIsHidden(rules, [terminalEl])) {
+  if (concealedAttrs(region.attrs) || terminalPaintedAway(region.attrs) || chainIsHidden(rules, [terminalEl])) {
     assert.fail('terminal login line missing');
   }
-  const visible = stripConcealed(
-    region.inner
-      .replace(/<!--[\s\S]*?-->/g, '')
-      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
-      .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replace(/<template\b[^>]*>[\s\S]*?<\/template>/gi, '')
-      .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, ''),
-    (tag, attrs) => chainIsHidden(rules, [elementFrom(tag, attrs), terminalEl]),
-  )
-    .replace(/<br\b[^>]*>/gi, '\n')
-    .replace(/<[^>]+>/g, '');
-  const lines = normalizePage(visible)
-    .split('\n')
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0)
-    .map((item) => item.replace(/^\$\s*/, ''))
-    .filter((item) => /^et login\b/.test(item));
-  if (lines.length === 0) {
-    assert.fail('terminal login line missing');
-  }
-  for (const line of lines) {
-    if (!ALLOWED_LOGIN_LINES.has(line)) {
-      assert.fail('terminal login line needs --email or --code');
-    }
-  }
+  assertLoginText(decodeEntities(terminalVisibleText(region.inner, [terminalEl], rules)));
 }
 
 const STILL_RUNNING_SENTENCE = 'A round that is still running prints decision: continue and does not name a winner.';
@@ -625,7 +693,7 @@ function decodeEntities(source) {
   let cur = source;
   for (let pass = 0; pass < 4; pass++) {
     const next = cur
-      .replace(/&nbsp(?:;|(?![A-Za-z0-9]))/gi, ' ')
+      .replace(/&nbsp(?:;|(?![A-Za-z0-9]))/gi, '\u00A0')
       .replace(/&(#x[0-9a-f]+|#\d+|sol|amp|percnt);?/gi, (entity) => {
         const token = entity.endsWith(';') ? entity.slice(0, -1) : entity;
         if (/^&sol$/i.test(token)) return '/';
@@ -680,14 +748,14 @@ function concealedAttrs(attrs) {
   const value = style ? (style[1] ?? style[2] ?? style[3] ?? '') : '';
   if (/display\s*:\s*none\b/i.test(value)) return true;
   if (/visibility\s*:\s*hidden\b/i.test(value)) return true;
-  if (/opacity\s*:\s*0(?:\.0+)?(?![0-9.])/i.test(value)) return true;
-  if (/font-size\s*:\s*0(?:\.0+)?(?![0-9.])/i.test(value)) return true;
+  if (/opacity\s*:\s*(?:0(?:\.0+)?|\.0+)(?![0-9.])/i.test(value)) return true;
+  if (/font-size\s*:\s*(?:0(?:\.0+)?|\.0+)(?![0-9.])/i.test(value)) return true;
   if (/(?<![\w-])color\s*:\s*transparent\b/i.test(value)) return true;
   if (/(?:^|[;\s])left\s*:\s*-\d{3,}px\b/i.test(value)) return true;
   if (/(?:^|[;\s])text-indent\s*:\s*-\d{3,}px\b/i.test(value)) return true;
   if (/(?<![\w-])color\s*:\s*var\(\s*--bg\s*\)/i.test(value)) return true;
   if (/transform\s*:[^;]*translate(?:X|Y|3d)?\(\s*-?\d{3,}/i.test(value)) return true;
-  if (/transform\s*:[^;]*scale\(\s*0(?:\.0+)?\s*\)/i.test(value)) return true;
+  if (/transform\s*:[^;]*scale\(\s*(?:0(?:\.0+)?|\.0+)\s*\)/i.test(value)) return true;
   return false;
 }
 
@@ -1013,6 +1081,53 @@ test('terminal login line is et login --email or et login --code', () => {
   const dropped = html.replace('> et login --email\n', '>\n');
   assert.notEqual(dropped, html);
   assert.throws(() => assertTerminalLogin(dropped), /terminal login line missing/);
+
+  const visibleSpan = html.replace('et login --email', 'et login <span>--email</span>');
+  assert.notEqual(visibleSpan, html);
+  assertTerminalLogin(visibleSpan);
+
+  const extras = [
+    ['double space', 'et login --email\n<span class="prompt">$</span> et  login\n'],
+    ['tab', 'et login --email\n<span class="prompt">$</span> et\tlogin\n'],
+    ['capital', 'et login --email\n<span class="prompt">$</span> Et login\n'],
+  ];
+  for (const [name, sample] of extras) {
+    const extra = html.replace('et login --email\n', sample);
+    assert.notEqual(extra, html, name);
+    assert.throws(() => assertTerminalLogin(extra), /--email or --code/, name);
+  }
+
+  const disguised = [
+    ['double space only', 'et  login'],
+    ['capital only', 'Et login'],
+    ['tab only', 'et\tlogin'],
+    ['nbsp', 'et&nbsp;login&nbsp;--email'],
+    ['zero width', 'et login --em\u200Bail'],
+    ['hidden flag', 'et login <span hidden>--email</span>'],
+    ['opacity', 'et login <span style="opacity:.0">--email</span>'],
+    ['font size', 'et login <span style="font-size:.0">--email</span>'],
+    ['scale', 'et login <span style="transform:scale(.0)">--email</span>'],
+    ['code color', 'et login <span style="color:var(--code)">--email</span>'],
+    ['light hex', 'et login <span style="color:#121612">--email</span>'],
+    ['dark hex', 'et login <span style="color:#1a211c">--email</span>'],
+  ];
+  for (const [name, sample] of disguised) {
+    const broken = html.replace('et login --email', sample);
+    assert.notEqual(broken, html, name);
+    assert.throws(() => assertTerminalLogin(broken), /--email or --code/, name);
+  }
+
+  const codeRule = '.terminal code { display: block; white-space: pre-wrap; }';
+  for (const [name, decl] of [
+    ['nested display', 'display: none'],
+    ['nested paint', 'color: var(--code)'],
+  ]) {
+    const nested = html
+      .replace(codeRule, `${codeRule}\n        .terminal code .gone { ${decl}; }`)
+      .replace('et login --email', 'et login <span class="gone">--email</span>');
+    assert.notEqual(nested, html, name);
+    assert.throws(() => assertTerminalLogin(nested), /--email or --code/, name);
+  }
 });
 
 test('et status prints decision: continue and does not name Clear price', () => {
@@ -1709,7 +1824,9 @@ describe('landing layout', () => {
     const apart = distance(rgb(dark.body), rgb(dark.panel));
     assert.ok(apart >= 20, `terminal background ${dark.panel} blends into ${dark.body} (${apart})`);
 
-    const commands = normalizePage(await page.locator('#terminal').innerText());
+    const rawCommands = await page.locator('#terminal').innerText();
+    assertLoginText(rawCommands);
+    const commands = normalizePage(rawCommands);
     assert.match(commands, /\$ et login --(?:email|code)\n\$ et site add\n\$ et round start\n\$ et status\ndecision: continue/);
     assert.equal(commands.toLowerCase().replace(/\s+/g, ' ').includes('winner: clear price'), false);
 
