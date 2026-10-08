@@ -271,6 +271,9 @@ function chainIsHidden(rules, chain) {
 }
 
 const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
+const HIDDEN_TEXT_TAGS = new Set(['script', 'style', 'template', 'noscript']);
+const RAW_SECTION_TAGS = new Set(['script', 'style', 'template', 'noscript', 'textarea']);
+const BLOCK_TAGS = new Set(['address', 'article', 'aside', 'blockquote', 'dd', 'div', 'dl', 'dt', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'li', 'main', 'nav', 'ol', 'p', 'pre', 'section', 'table', 'tr', 'ul']);
 
 function dogfoodElements(source) {
   const clean = source
@@ -401,26 +404,59 @@ const STILL_RUNNING_SENTENCE = 'A round that is still running prints decision: c
 
 function claimsLiveRoundWinner(text) {
   const rest = text.split(STILL_RUNNING_SENTENCE).join(' ');
-  const subject = '(?:homepage(?:\\s+round)?|endlesstesting-100|valentinyeo\\.com|valentinyeo-2)';
+  const subject = '(?:the\\s+)?(?:homepage(?:\\s+round)?|endlesstesting-100|valentinyeo\\.com|valentinyeo-2)';
   const patterns = [
-    new RegExp(`${subject}\\s+has\\s+a\\s+winner`, 'i'),
-    new RegExp(`winner\\s+is\\s+(?:the\\s+)?${subject}`, 'i'),
-    new RegExp(`${subject}\\s+is\\s+(?:the\\s+)?winner`, 'i'),
+    new RegExp(`${subject}\\s+(?:has|have|got|gets)\\s+(?:a|the|its)\\s+winner`, 'i'),
+    new RegExp(`${subject}\\s+is\\s+(?:a\\s+|the\\s+)?winner`, 'i'),
+    new RegExp(`winner\\s+is\\s+${subject}`, 'i'),
+    new RegExp(`winner\\s+(?:of|for)\\s+${subject}`, 'i'),
+    new RegExp(`(?:called|named|picked|declared)\\s+(?:a\\s+|the\\s+)?winner\\s+(?:for|on)\\s+${subject}`, 'i'),
+    new RegExp(`${subject}'s\\s+winner`, 'i'),
   ];
   return patterns.some((pattern) => pattern.test(rest));
 }
 
-function heroVisibleText(source) {
+function heroInner(source) {
   const uncommented = source.replace(/<!--[\s\S]*?-->/g, '');
-  const open = uncommented.match(/<section class="hero">/);
-  if (!open) return '';
-  const from = open.index + open[0].length;
-  const close = uncommented.indexOf('</section>', from);
-  if (close < 0) return '';
-  const rules = concealingRules(pageCss(uncommented));
-  const heroEl = elementFrom('section', ' class="hero"');
-  if (concealedAttrs(' class="hero"') || chainIsHidden(rules, [heroEl])) return '';
-  return collectVisible(uncommented.slice(from, close), [heroEl], rules);
+  const re = /<(\/?)([a-zA-Z][\w:-]*)\b([^>]*)>/g;
+  let match;
+  let depth = 0;
+  let start = -1;
+  let heroAttrs = '';
+  while ((match = re.exec(uncommented))) {
+    const closing = match[1] === '/';
+    const tag = match[2].toLowerCase();
+    const attrs = match[3] || '';
+    if (!closing && RAW_SECTION_TAGS.has(tag)) {
+      const end = uncommented.slice(re.lastIndex).search(new RegExp(`</${tag}\\s*>`, 'i'));
+      if (end < 0) return null;
+      const gt = uncommented.indexOf('>', re.lastIndex + end);
+      re.lastIndex = gt < 0 ? uncommented.length : gt + 1;
+      continue;
+    }
+    if (tag !== 'section') continue;
+    if (!closing) {
+      const el = elementFrom(tag, attrs);
+      if (depth === 0 && el.classes.has('hero')) {
+        start = re.lastIndex;
+        heroAttrs = attrs;
+        depth = 1;
+      } else if (depth > 0) depth += 1;
+    } else if (depth > 0) {
+      depth -= 1;
+      if (depth === 0) return { attrs: heroAttrs, inner: uncommented.slice(start, match.index) };
+    }
+  }
+  return null;
+}
+
+function heroVisibleText(source) {
+  const hero = heroInner(source);
+  if (!hero) return '';
+  const rules = concealingRules(pageCss(source.replace(/<!--[\s\S]*?-->/g, '')));
+  const heroEl = elementFrom('section', hero.attrs);
+  if (concealedAttrs(hero.attrs) || chainIsHidden(rules, [heroEl])) return '';
+  return collectVisible(hero.inner, [heroEl], rules);
 }
 
 function collectVisible(fragment, ancestors, rules) {
@@ -438,6 +474,7 @@ function collectVisible(fragment, ancestors, rules) {
     const tag = match[2].toLowerCase();
     const attrs = match[3] || '';
     if (closing) {
+      const visibleBlock = BLOCK_TAGS.has(tag) && hiddenDepth.length === 0;
       for (let i = stack.length - 1; i >= 0; i--) {
         if (stack[i].tag === tag) {
           stack.length = i;
@@ -445,11 +482,13 @@ function collectVisible(fragment, ancestors, rules) {
         }
       }
       while (hiddenDepth.length && hiddenDepth[hiddenDepth.length - 1] > stack.length) hiddenDepth.pop();
+      if (visibleBlock) out += ' ';
       continue;
     }
     const el = elementFrom(tag, attrs);
     const chain = [el, ...stack.slice().reverse(), ...ancestors];
-    const hide = concealedAttrs(attrs) || chainIsHidden(rules, chain);
+    const hide = concealedAttrs(attrs) || chainIsHidden(rules, chain) || HIDDEN_TEXT_TAGS.has(tag);
+    if (BLOCK_TAGS.has(tag) && !hide && hiddenDepth.length === 0) out += ' ';
     if (tag === 'br') {
       if (!hide && hiddenDepth.length === 0) out += ' ';
       continue;
@@ -588,6 +627,9 @@ function concealedAttrs(attrs) {
   if (/(?<![\w-])color\s*:\s*transparent\b/i.test(value)) return true;
   if (/(?:^|[;\s])left\s*:\s*-\d{3,}px\b/i.test(value)) return true;
   if (/(?:^|[;\s])text-indent\s*:\s*-\d{3,}px\b/i.test(value)) return true;
+  if (/(?<![\w-])color\s*:\s*var\(\s*--bg\s*\)/i.test(value)) return true;
+  if (/transform\s*:[^;]*translate(?:X|Y|3d)?\(\s*-?\d{3,}/i.test(value)) return true;
+  if (/transform\s*:[^;]*scale\(\s*0(?:\.0+)?\s*\)/i.test(value)) return true;
   return false;
 }
 
@@ -985,6 +1027,67 @@ test('a still-running round prints decision: continue and names no winner', () =
   const siteClaim = html.replace(STILL_RUNNING_SENTENCE, `${STILL_RUNNING_SENTENCE} valentinyeo.com has a winner.`);
   assert.notEqual(siteClaim, html);
   assert.throws(() => assertStillRunningSentence(siteClaim), /claims a live round winner/);
+
+  const stillP = `<p id="still-running" class="still-running">${STILL_RUNNING_SENTENCE}</p>`;
+  for (const [name, wrapper] of [
+    ['script', (inner) => `<script>${inner}</script>`],
+    ['style', (inner) => `<style>${inner}</style>`],
+    ['template', (inner) => `<template><p>${inner}</p></template>`],
+    ['noscript', (inner) => `<noscript><p>${inner}</p></noscript>`],
+  ]) {
+    const only = html.replace(stillP, wrapper(STILL_RUNNING_SENTENCE));
+    assert.notEqual(only, html, name);
+    assert.throws(() => assertStillRunningSentence(only), /still-running sentence missing/, name);
+  }
+
+  const cut = html.replace(
+    stillP,
+    `${stillP}<script>\nvar x = '</section>';\n</script><p>The homepage round has a winner.</p>`,
+  );
+  assert.notEqual(cut, html);
+  assert.throws(() => assertStillRunningSentence(cut), /claims a live round winner/);
+
+  const claims = [
+    'The homepage round is a winner.',
+    'valentinyeo.com is a winner.',
+    'valentinyeo.com has the winner.',
+    'The winner of the homepage round is Clear price.',
+    'endlesstesting-100 got a winner.',
+    'The homepage has the winner.',
+    'We called a winner for valentinyeo.com.',
+    'The winner for endlesstesting-100 is Clear price.',
+    "The homepage round's winner is Clear price.",
+  ];
+  for (const claim of claims) {
+    const claimed = html.replace(STILL_RUNNING_SENTENCE, `${STILL_RUNNING_SENTENCE} ${claim}`);
+    assert.notEqual(claimed, html, claim);
+    assert.throws(() => assertStillRunningSentence(claimed), /claims a live round winner/, claim);
+  }
+
+  const denial = html.replace(STILL_RUNNING_SENTENCE, `${STILL_RUNNING_SENTENCE} The homepage round has no winner. valentinyeo.com is not a winner.`);
+  assert.notEqual(denial, html);
+  assertStillRunningSentence(denial);
+
+  const bgColor = html.replace(
+    '.still-running { margin-top: 0.75rem; color: var(--muted); font-size: 0.92rem; }',
+    '.still-running { margin-top: 0.75rem; color: var(--bg); font-size: 0.92rem; }',
+  );
+  assert.notEqual(bgColor, html);
+  assert.throws(() => assertStillRunningSentence(bgColor), /still-running sentence missing/);
+
+  const shifted = html.replace(
+    '.still-running { margin-top: 0.75rem; color: var(--muted); font-size: 0.92rem; }',
+    '.still-running { margin-top: 0.75rem; color: var(--muted); font-size: 0.92rem; transform: translateX(-9999px); }',
+  );
+  assert.notEqual(shifted, html);
+  assert.throws(() => assertStillRunningSentence(shifted), /still-running sentence missing/);
+
+  const scaled = html.replace(
+    '.still-running { margin-top: 0.75rem; color: var(--muted); font-size: 0.92rem; }',
+    '.still-running { margin-top: 0.75rem; color: var(--muted); font-size: 0.92rem; transform: scale(0); }',
+  );
+  assert.notEqual(scaled, html);
+  assert.throws(() => assertStillRunningSentence(scaled), /still-running sentence missing/);
 });
 
 test('you connect Claude, Codex, or ChatGPT and the product writes the next lines', () => {
@@ -1479,6 +1582,12 @@ describe('landing layout', () => {
           if (!el) return { found: false };
           const style = getComputedStyle(el);
           const rect = el.getBoundingClientRect();
+          let node = el;
+          let bg = style.backgroundColor;
+          while (node && (bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)')) {
+            node = node.parentElement;
+            bg = node ? getComputedStyle(node).backgroundColor : bg;
+          }
           return {
             found: true,
             inNote: note.contains(el),
@@ -1489,10 +1598,14 @@ describe('landing layout', () => {
             fontSize: parseFloat(style.fontSize),
             width: rect.width,
             height: rect.height,
+            left: rect.left,
             right: rect.right,
+            color: style.color,
+            bg,
             overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
             winner: document.querySelector('#terminal .dim').textContent.trim(),
             noteHasDecision: note.innerText.includes('decision: continue'),
+            heroText: hero.innerText.replace(/\s+/g, ' ').trim(),
           };
         }, sentence);
         assert.equal(info.found, true, `${scheme} ${width} sentence missing`);
@@ -1503,10 +1616,14 @@ describe('landing layout', () => {
         assert.ok(info.opacity >= 0.99, `${scheme} ${width} opacity ${info.opacity}`);
         assert.ok(info.fontSize >= 12, `${scheme} ${width} font ${info.fontSize}`);
         assert.ok(info.width > 40 && info.height > 8, `${scheme} ${width} box ${info.width}x${info.height}`);
+        assert.ok(info.left >= -1, `${scheme} ${width} sentence offscreen`);
         assert.ok(info.right <= width + 1, `${scheme} ${width} sentence overflows`);
+        const ratio = contrastRatio(rgb(info.color), rgb(info.bg));
+        assert.ok(ratio >= 4.5, `${scheme} ${width} contrast ${ratio.toFixed(2)} ${info.color} on ${info.bg}`);
         assert.equal(info.overflow, 0, `${scheme} ${width} page overflow ${info.overflow}`);
         assert.equal(info.winner, 'winner: Clear price');
         assert.equal(info.noteHasDecision, false, `${scheme} ${width} dogfood note has the status sentence`);
+        assert.equal(claimsLiveRoundWinner(info.heroText), false, `${scheme} ${width} hero claims a live round winner`);
       }
     }
   });
