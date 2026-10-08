@@ -673,19 +673,86 @@ test('primary links use Start 7-day free trial and reject the shorter label', ()
 const INSTALL_DOCS = 'https://docs.endlesstesting.ai/getting-started/install/';
 const PRIVATE_REPO = 'github.com/valentinyeo/endless-testing';
 
-function assertInstallDocLinks(source) {
-  if (source.includes(PRIVATE_REPO)) assert.fail('page links the private GitHub repo');
+function percentDecoded(source) {
+  let cur = decodeEntities(source);
+  for (let pass = 0; pass < 3; pass++) {
+    const next = cur.replace(/%[0-9a-f]{2}/gi, (hex) => {
+      try {
+        return decodeURIComponent(hex);
+      } catch {
+        return hex;
+      }
+    });
+    if (next === cur) return cur;
+    cur = next;
+  }
+  return cur;
+}
+
+function pageLinksPrivateRepo(source) {
+  if (containsNeedle(source, PRIVATE_REPO)) return true;
+  if (containsNeedle(percentDecoded(source), PRIVATE_REPO)) return true;
+  const glued = normalizePage(percentDecoded(source))
+    .toLowerCase()
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<[^>]+>/g, '');
+  return glued.includes(PRIVATE_REPO);
+}
+
+function hrefOf(attrs) {
+  const match = attrs.match(/\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i);
+  if (!match) return '';
+  return match[1] ?? match[2] ?? match[3] ?? '';
+}
+
+function anchorText(inner) {
+  return normalizePage(stripConcealed(inner).replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim();
+}
+
+function elementSlice(source, openRe, tagName) {
+  const clean = source.replace(/<!--[\s\S]*?-->/g, '');
+  const open = new RegExp(openRe.source, openRe.flags.replace('g', '')).exec(clean);
+  if (!open) return null;
+  const tagRe = new RegExp(`</?${tagName}\\b[^>]*>`, 'gi');
+  tagRe.lastIndex = open.index + open[0].length;
+  let depth = 1;
+  let match;
+  while ((match = tagRe.exec(clean))) {
+    depth += match[0].startsWith('</') ? -1 : 1;
+    if (depth === 0) {
+      return { open: open[0], inner: clean.slice(open.index + open[0].length, match.index) };
+    }
+  }
+  return null;
+}
+
+function containerConcealed(openTag, allowHidden) {
+  const attrs = openTag.replace(/^<\w+\b/i, '').replace(/>$/, '');
+  const rest = allowHidden ? attrs.replace(/(^|\s)hidden(?=\s|=|$)/gi, '$1') : attrs;
+  return concealedAttrs(rest);
+}
+
+function assertInstallLinkIn(source, openRe, tagName, allowHidden) {
+  const slice = elementSlice(source, openRe, tagName);
+  if (!slice || containerConcealed(slice.open, allowHidden)) assert.fail('install doc links missing');
+  const visible = stripConcealed(slice.inner);
   const links = [];
-  for (const match of source.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)) {
-    const href = (match[1].match(/\bhref="([^"]*)"/) || [])[1] || '';
-    const text = match[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  for (const match of visible.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)) {
+    if (concealedAttrs(match[1])) continue;
+    const href = hrefOf(match[1]);
+    const text = anchorText(match[2]);
     if (href === INSTALL_DOCS || text === 'Install et') links.push({ href, text });
   }
-  if (links.length !== 3) assert.fail('install doc links missing');
-  for (const link of links) {
-    if (link.href !== INSTALL_DOCS) assert.fail('install doc href wrong');
-    if (link.text !== 'Install et') assert.fail('install doc label wrong');
-  }
+  if (links.length !== 1) assert.fail('install doc links missing');
+  if (links[0].href !== INSTALL_DOCS) assert.fail('install doc href wrong');
+  if (links[0].text !== 'Install et') assert.fail('install doc label wrong');
+}
+
+function assertInstallDocLinks(source) {
+  if (pageLinksPrivateRepo(source)) assert.fail('page links the private GitHub repo');
+  assertInstallLinkIn(source, /<nav\b[^>]*\bclass\s*=\s*"[^"]*\bnav-links\b[^"]*"[^>]*>/i, 'nav', false);
+  assertInstallLinkIn(source, /<div\b[^>]*\bid\s*=\s*"nav-panel"[^>]*>/i, 'div', true);
+  assertInstallLinkIn(source, /<article\b[^>]*\bclass\s*=\s*"[^"]*\boss\b[^"]*"[^>]*>/i, 'article', false);
 }
 
 test('install links point at the install docs and the private repo is gone', () => {
@@ -702,6 +769,54 @@ test('install links point at the install docs and the private repo is gone', () 
   );
   assert.notEqual(dropped, html);
   assert.throws(() => assertInstallDocLinks(dropped), /install doc links missing/);
+
+  const disguises = [
+    ['entity hyphen', `${html}\n<a href="https://github.com/valentinyeo/endless&#45;testing">GitHub</a>`],
+    ['hex hyphen', `${html}\n<a href="https://github.com/valentinyeo/endless&#x2d;testing">GitHub</a>`],
+    ['named slash', `${html}\ngithub.com&sol;valentinyeo&sol;endless-testing`],
+    ['double encoded slash', `${html}\ngithub.com&amp;sol;valentinyeo&amp;sol;endless-testing`],
+    ['upper host', `${html}\nhttps://GitHub.com/valentinyeo/endless-testing`],
+    ['zero width', `${html}\ngithub.com/valentinyeo/endless-\u200btesting`],
+    ['percent hyphen', `${html}\nhttps://github.com/valentinyeo/endless%2Dtesting`],
+    ['split tags', `${html}\n<p>github.com/<span>valentinyeo/endless-testing</span></p>`],
+  ];
+  for (const [name, sample] of disguises) {
+    assert.notEqual(sample, html, name);
+    assert.throws(() => assertInstallDocLinks(sample), /private GitHub repo/, name);
+  }
+
+  const commented = html
+    .replaceAll(
+      `<a href="${INSTALL_DOCS}">Install et</a>`,
+      `<!-- <a href="${INSTALL_DOCS}">Install et</a> -->`,
+    )
+    .replace(
+      `<a class="btn btn-quiet" href="${INSTALL_DOCS}">Install et</a>`,
+      `<!-- <a class="btn btn-quiet" href="${INSTALL_DOCS}">Install et</a> -->`,
+    );
+  assert.notEqual(commented, html);
+  assert.throws(() => assertInstallDocLinks(commented), /install doc links missing/);
+
+  const hiddenNav = html.replace(
+    `<a href="${INSTALL_DOCS}">Install et</a>`,
+    `<a href="${INSTALL_DOCS}" hidden>Install et</a>`,
+  );
+  assert.notEqual(hiddenNav, html);
+  assert.throws(() => assertInstallDocLinks(hiddenNav), /install doc links missing/);
+
+  const hiddenOss = html.replace(
+    `<a class="btn btn-quiet" href="${INSTALL_DOCS}">Install et</a>`,
+    `<a class="btn btn-quiet" href="${INSTALL_DOCS}" style="display:none">Install et</a>`,
+  );
+  assert.notEqual(hiddenOss, html);
+  assert.throws(() => assertInstallDocLinks(hiddenOss), /install doc links missing/);
+
+  const wrapped = html.replace(
+    `<a href="${INSTALL_DOCS}">Install et</a>`,
+    `<span style="display:none"><a href="${INSTALL_DOCS}">Install et</a></span>`,
+  );
+  assert.notEqual(wrapped, html);
+  assert.throws(() => assertInstallDocLinks(wrapped), /install doc links missing/);
 });
 
 const INSTALL_FILES = [
@@ -2162,5 +2277,74 @@ describe('landing layout', () => {
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('#nav-panel').getAttribute('hidden'), '');
     assert.equal(await page.locator('#nav-toggle').getAttribute('aria-expanded'), 'false');
+  });
+
+  test('visible install links point at the install docs', async () => {
+    function readInstall(selector) {
+      return page.evaluate((selector) => {
+        const el = document.querySelector(selector);
+        if (!el) return { found: false };
+        const style = getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        return {
+          found: true,
+          text: el.innerText.replace(/\s+/g, ' ').trim(),
+          href: el.getAttribute('href'),
+          display: style.display,
+          visibility: style.visibility,
+          opacity: Number(style.opacity),
+          fontSize: parseFloat(style.fontSize),
+          width: rect.width,
+          height: rect.height,
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          bottom: rect.bottom,
+          innerWidth: window.innerWidth,
+          innerHeight: window.innerHeight,
+          overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          privateRepo: document.documentElement.innerHTML.toLowerCase().includes('github.com/valentinyeo/endless-testing'),
+        };
+      }, selector);
+    }
+
+    for (const scheme of ['light', 'dark']) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await open();
+      const desktop = await readInstall('.nav-links a[href="https://docs.endlesstesting.ai/getting-started/install/"]');
+      const oss = await readInstall('.oss a[href="https://docs.endlesstesting.ai/getting-started/install/"]');
+      for (const [where, info] of [['desktop', desktop], ['oss', oss]]) {
+        assert.equal(info.found, true, `${scheme} ${where} install link missing`);
+        assert.equal(info.text, 'Install et', `${scheme} ${where} label`);
+        assert.equal(info.href, INSTALL_DOCS, `${scheme} ${where} href`);
+        assert.notEqual(info.display, 'none', `${scheme} ${where} display`);
+        assert.equal(info.visibility, 'visible', `${scheme} ${where} visibility`);
+        assert.ok(info.opacity >= 0.99, `${scheme} ${where} opacity ${info.opacity}`);
+        assert.ok(info.fontSize >= 12, `${scheme} ${where} font ${info.fontSize}`);
+        assert.ok(info.width > 20 && info.height > 8, `${scheme} ${where} box ${info.width}x${info.height}`);
+        assert.ok(info.left >= -1 && info.right <= info.innerWidth + 1, `${scheme} ${where} clipped`);
+        assert.equal(info.overflow, 0, `${scheme} ${where} overflow ${info.overflow}`);
+        assert.equal(info.privateRepo, false, `${scheme} ${where} private repo`);
+      }
+
+      await page.setViewportSize({ width: 375, height: 812 });
+      await open();
+      const beforeMenu = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.equal(beforeMenu, 0, `${scheme} 375 overflow ${beforeMenu}`);
+      await page.click('#nav-toggle');
+      const mobile = await readInstall('#nav-panel a[href="https://docs.endlesstesting.ai/getting-started/install/"]');
+      assert.equal(mobile.found, true, `${scheme} mobile install link missing`);
+      assert.equal(mobile.text, 'Install et', `${scheme} mobile label`);
+      assert.equal(mobile.href, INSTALL_DOCS, `${scheme} mobile href`);
+      assert.notEqual(mobile.display, 'none', `${scheme} mobile display`);
+      assert.equal(mobile.visibility, 'visible', `${scheme} mobile visibility`);
+      assert.ok(mobile.opacity >= 0.99, `${scheme} mobile opacity ${mobile.opacity}`);
+      assert.ok(mobile.width > 20 && mobile.height > 8, `${scheme} mobile box ${mobile.width}x${mobile.height}`);
+      assert.ok(mobile.left >= -1 && mobile.right <= mobile.innerWidth + 1, `${scheme} mobile clipped`);
+      assert.ok(mobile.top >= -1 && mobile.bottom <= mobile.innerHeight + 1, `${scheme} mobile offscreen`);
+      assert.equal(mobile.overflow, 0, `${scheme} mobile overflow ${mobile.overflow}`);
+      assert.equal(mobile.privateRepo, false, `${scheme} mobile private repo`);
+    }
   });
 });
