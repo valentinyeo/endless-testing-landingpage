@@ -177,6 +177,7 @@
         .terminal-bar i { width: 0.7rem; height: 0.7rem; border-radius: 50%; background: #3a403c; display: block; }
         .terminal code { display: block; white-space: pre-wrap; }
         .install-files { margin-top: 0.75rem; color: var(--muted); font-size: 0.82rem; line-height: 1.45; overflow-wrap: anywhere; }
+        .still-running { margin-top: 0.75rem; color: var(--muted); font-size: 0.92rem; }
         .install-files code { display: block; margin-bottom: 0.45rem; color: var(--fg); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
         .prompt { color: var(--code-prompt); }
         .dim { color: var(--code-dim); }
@@ -287,6 +288,7 @@
 <span class="dim">winner: Clear price</span></code>
                     </div>
                     <p class="install-files"><code>curl -fsSL https://api.endlesstesting.ai/install.sh | sh</code> et-x86_64-linux-musl, et-aarch64-linux-musl, et-x86_64-macos, et-aarch64-macos, and et-x86_64-windows. The script picks the file for this machine.</p>
+                    <p id="still-running" class="still-running">A round that is still running prints decision: continue and does not name a winner.</p>
                 </div>
             </div>
         </section>

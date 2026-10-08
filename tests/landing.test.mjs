@@ -397,6 +397,80 @@ function assertStatusNamesWinner(source) {
   assert.ok(line, 'sample has no winner line');
 }
 
+const STILL_RUNNING_SENTENCE = 'A round that is still running prints decision: continue and does not name a winner.';
+
+function claimsLiveRoundWinner(text) {
+  const rest = text.split(STILL_RUNNING_SENTENCE).join(' ');
+  const subject = '(?:homepage(?:\\s+round)?|endlesstesting-100|valentinyeo\\.com|valentinyeo-2)';
+  const patterns = [
+    new RegExp(`${subject}\\s+has\\s+a\\s+winner`, 'i'),
+    new RegExp(`winner\\s+is\\s+(?:the\\s+)?${subject}`, 'i'),
+    new RegExp(`${subject}\\s+is\\s+(?:the\\s+)?winner`, 'i'),
+  ];
+  return patterns.some((pattern) => pattern.test(rest));
+}
+
+function heroVisibleText(source) {
+  const uncommented = source.replace(/<!--[\s\S]*?-->/g, '');
+  const open = uncommented.match(/<section class="hero">/);
+  if (!open) return '';
+  const from = open.index + open[0].length;
+  const close = uncommented.indexOf('</section>', from);
+  if (close < 0) return '';
+  const rules = concealingRules(pageCss(uncommented));
+  const heroEl = elementFrom('section', ' class="hero"');
+  if (concealedAttrs(' class="hero"') || chainIsHidden(rules, [heroEl])) return '';
+  return collectVisible(uncommented.slice(from, close), [heroEl], rules);
+}
+
+function collectVisible(fragment, ancestors, rules) {
+  const re = /<(\/?)([a-zA-Z][\w:-]*)\b([^>]*)>|([^<]+)/g;
+  const stack = [];
+  const hiddenDepth = [];
+  let out = '';
+  let match;
+  while ((match = re.exec(fragment))) {
+    if (match[4] !== undefined) {
+      if (hiddenDepth.length === 0) out += match[4];
+      continue;
+    }
+    const closing = match[1] === '/';
+    const tag = match[2].toLowerCase();
+    const attrs = match[3] || '';
+    if (closing) {
+      for (let i = stack.length - 1; i >= 0; i--) {
+        if (stack[i].tag === tag) {
+          stack.length = i;
+          break;
+        }
+      }
+      while (hiddenDepth.length && hiddenDepth[hiddenDepth.length - 1] > stack.length) hiddenDepth.pop();
+      continue;
+    }
+    const el = elementFrom(tag, attrs);
+    const chain = [el, ...stack.slice().reverse(), ...ancestors];
+    const hide = concealedAttrs(attrs) || chainIsHidden(rules, chain);
+    if (tag === 'br') {
+      if (!hide && hiddenDepth.length === 0) out += ' ';
+      continue;
+    }
+    if (VOID_TAGS.has(tag) || /\/\s*>$/.test(match[0])) continue;
+    stack.push(el);
+    if (hide || hiddenDepth.length > 0) hiddenDepth.push(stack.length);
+  }
+  return normalizePage(out).replace(/\s+/g, ' ').trim();
+}
+
+function assertStillRunningSentence(source) {
+  const sample = statusSample(source);
+  if (!sample.split('\n').some((item) => item.trim() === 'winner: Clear price')) {
+    assert.fail('winner: Clear price missing from terminal');
+  }
+  const text = heroVisibleText(source);
+  if (!hasBounded(text, STILL_RUNNING_SENTENCE)) assert.fail('still-running sentence missing');
+  if (claimsLiveRoundWinner(text)) assert.fail('still-running sentence claims a live round winner');
+}
+
 function assertLinesSection(source) {
   const lines = source.match(/<section id="lines">([\s\S]*?)<\/section>/);
   assert.ok(lines, 'lines section missing');
@@ -861,6 +935,56 @@ test('the et status sample names a winner', () => {
 
   const comment = html.replace('<span class="dim">winner: Clear price</span>', '<!-- winner: Clear price -->');
   assert.throws(() => assertStatusNamesWinner(comment), /sample has no winner line/);
+});
+
+test('a still-running round prints decision: continue and names no winner', () => {
+  assertStillRunningSentence(html);
+  assert.equal(claimsLiveRoundWinner(STILL_RUNNING_SENTENCE), false);
+
+  const missing = html.replace(STILL_RUNNING_SENTENCE, 'A finished round names a winner.');
+  assert.notEqual(missing, html);
+  assert.throws(() => assertStillRunningSentence(missing), /still-running sentence missing/);
+
+  const commented = html.replace(STILL_RUNNING_SENTENCE, `<!-- ${STILL_RUNNING_SENTENCE} -->`);
+  assert.notEqual(commented, html);
+  assert.throws(() => assertStillRunningSentence(commented), /still-running sentence missing/);
+
+  const hidden = html.replace('<p id="still-running"', '<p id="still-running" hidden');
+  assert.notEqual(hidden, html);
+  assert.throws(() => assertStillRunningSentence(hidden), /still-running sentence missing/);
+
+  const none = html.replace('<p id="still-running"', '<p id="still-running" style="display:none"');
+  assert.notEqual(none, html);
+  assert.throws(() => assertStillRunningSentence(none), /still-running sentence missing/);
+
+  const classHide = html.replace(
+    '.still-running { margin-top: 0.75rem; color: var(--muted); font-size: 0.92rem; }',
+    '.still-running { margin-top: 0.75rem; color: var(--muted); font-size: 0.92rem; display: none; }',
+  );
+  assert.notEqual(classHide, html);
+  assert.throws(() => assertStillRunningSentence(classHide), /still-running sentence missing/);
+
+  const moved = html.replace(/<p id="still-running"[\s\S]*?<\/p>/, '');
+  assert.notEqual(moved, html);
+  const parked = moved.replace('</body>', `<p id="still-running" class="still-running">${STILL_RUNNING_SENTENCE}</p></body>`);
+  assert.throws(() => assertStillRunningSentence(parked), /still-running sentence missing/);
+
+  const droppedWinner = html.replace('<span class="dim">winner: Clear price</span>', '<span class="dim">round: 2</span>');
+  assert.notEqual(droppedWinner, html);
+  assert.throws(() => assertStillRunningSentence(droppedWinner), /winner: Clear price missing from terminal/);
+
+  const outsideWinner = html
+    .replace('<span class="dim">winner: Clear price</span>', '<span class="dim">decision: continue</span>')
+    .replace('</body>', '<p>winner: Clear price</p></body>');
+  assert.throws(() => assertStillRunningSentence(outsideWinner), /winner: Clear price missing from terminal/);
+
+  const homeClaim = html.replace(STILL_RUNNING_SENTENCE, `${STILL_RUNNING_SENTENCE} The homepage round has a winner.`);
+  assert.notEqual(homeClaim, html);
+  assert.throws(() => assertStillRunningSentence(homeClaim), /claims a live round winner/);
+
+  const siteClaim = html.replace(STILL_RUNNING_SENTENCE, `${STILL_RUNNING_SENTENCE} valentinyeo.com has a winner.`);
+  assert.notEqual(siteClaim, html);
+  assert.throws(() => assertStillRunningSentence(siteClaim), /claims a live round winner/);
 });
 
 test('you connect Claude, Codex, or ChatGPT and the product writes the next lines', () => {
@@ -1335,6 +1459,56 @@ describe('landing layout', () => {
     assert.ok(winner.opacity >= 0.99, `winner opacity ${winner.opacity}`);
     assert.ok(winner.fontSize >= 12, `winner font size ${winner.fontSize}`);
     assert.ok(winner.left >= winner.termLeft - 1 && winner.right <= winner.termRight + 1, 'winner line is clipped');
+  });
+
+  test('hero shows the still-running sentence', async () => {
+    const sentence = 'A round that is still running prints decision: continue and does not name a winner.';
+    for (const scheme of ['light', 'dark']) {
+      await page.emulateMedia({ colorScheme: scheme });
+      for (const width of [375, 1280]) {
+        await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
+        await open();
+        const info = await page.evaluate((want) => {
+          const hero = document.querySelector('section.hero');
+          const note = document.getElementById('dogfood-note');
+          let el = null;
+          for (const node of hero.querySelectorAll('p')) {
+            const text = node.innerText.replace(/\s+/g, ' ').trim();
+            if (text === want) el = node;
+          }
+          if (!el) return { found: false };
+          const style = getComputedStyle(el);
+          const rect = el.getBoundingClientRect();
+          return {
+            found: true,
+            inNote: note.contains(el),
+            inHero: hero.contains(el),
+            display: style.display,
+            visibility: style.visibility,
+            opacity: Number(style.opacity),
+            fontSize: parseFloat(style.fontSize),
+            width: rect.width,
+            height: rect.height,
+            right: rect.right,
+            overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+            winner: document.querySelector('#terminal .dim').textContent.trim(),
+            noteHasDecision: note.innerText.includes('decision: continue'),
+          };
+        }, sentence);
+        assert.equal(info.found, true, `${scheme} ${width} sentence missing`);
+        assert.equal(info.inHero, true, `${scheme} ${width} sentence outside hero`);
+        assert.equal(info.inNote, false, `${scheme} ${width} sentence inside dogfood note`);
+        assert.notEqual(info.display, 'none', `${scheme} ${width} display`);
+        assert.equal(info.visibility, 'visible', `${scheme} ${width} visibility`);
+        assert.ok(info.opacity >= 0.99, `${scheme} ${width} opacity ${info.opacity}`);
+        assert.ok(info.fontSize >= 12, `${scheme} ${width} font ${info.fontSize}`);
+        assert.ok(info.width > 40 && info.height > 8, `${scheme} ${width} box ${info.width}x${info.height}`);
+        assert.ok(info.right <= width + 1, `${scheme} ${width} sentence overflows`);
+        assert.equal(info.overflow, 0, `${scheme} ${width} page overflow ${info.overflow}`);
+        assert.equal(info.winner, 'winner: Clear price');
+        assert.equal(info.noteHasDecision, false, `${scheme} ${width} dogfood note has the status sentence`);
+      }
+    }
   });
 
   test('install files stay visible beside the terminal', async () => {
