@@ -370,34 +370,24 @@ function assertDogfoodRounds(source) {
   if (noteGivesLift(note)) assert.fail('dogfood note gives a lift');
 }
 
-function terminalCode(source) {
+function assertStatusContinues(source) {
   const terminal = source.match(/id="terminal"[\s\S]*?<code>([\s\S]*?)<\/code>/);
   assert.ok(terminal, 'terminal sample missing');
-  return terminal[1].replace(/<([a-zA-Z][\w:-]*)\b[^>]*\shidden\b[^>]*>[\s\S]*?<\/\1>/g, '');
-}
-
-function statusSample(source) {
-  const text = terminalCode(source).replace(/<[^>]+>/g, '');
+  if (terminal[1].includes('winner: Clear price')) {
+    assert.fail('winner: Clear price is in the terminal');
+  }
+  const text = terminal[1]
+    .replace(/<([a-zA-Z][\w:-]*)\b[^>]*\shidden\b[^>]*>[\s\S]*?<\/\1>/g, '')
+    .replace(/<[^>]+>/g, '');
   const marker = '$ et status';
   const at = text.indexOf(marker);
-  assert.notEqual(at, -1, 'et status command missing from terminal');
-  const after = text.slice(at + marker.length);
+  const after = at < 0 ? '' : text.slice(at + marker.length);
   const newline = after.indexOf('\n');
-  assert.notEqual(newline, -1, 'sample has no winner line');
-  return after.slice(newline + 1);
-}
-
-function namesWinner(line) {
-  const named = line.match(/^winner:\s+(\S(?:.*\S)?)$/i);
-  if (!named) return false;
-  const name = named[1].trim().toLowerCase();
-  if (/^(null|none|undefined|nil|n\/a|na|false|pending|unknown|tbd|no winner|no-winner|-+|\?+)$/.test(name)) return false;
-  return true;
-}
-
-function assertStatusNamesWinner(source) {
-  const line = statusSample(source).split('\n').map((item) => item.trim()).find(namesWinner);
-  assert.ok(line, 'sample has no winner line');
+  const rest = newline < 0 ? '' : after.slice(newline + 1);
+  const lines = rest.split('\n').map((item) => item.trim());
+  if (!lines.includes('decision: continue')) {
+    assert.fail('decision: continue missing from terminal');
+  }
 }
 
 const STILL_RUNNING_SENTENCE = 'A round that is still running prints decision: continue and does not name a winner.';
@@ -501,10 +491,7 @@ function collectVisible(fragment, ancestors, rules) {
 }
 
 function assertStillRunningSentence(source) {
-  const sample = statusSample(source);
-  if (!sample.split('\n').some((item) => item.trim() === 'winner: Clear price')) {
-    assert.fail('winner: Clear price missing from terminal');
-  }
+  assertStatusContinues(source);
   const text = heroVisibleText(source);
   if (!hasBounded(text, STILL_RUNNING_SENTENCE)) assert.fail('still-running sentence missing');
   if (claimsLiveRoundWinner(text)) assert.fail('still-running sentence claims a live round winner');
@@ -941,42 +928,59 @@ test('the page does not ask for an OpenRouter key', () => {
   assertNoOpenRouterKey(far);
 });
 
-test('the et status sample names a winner', () => {
-  assertStatusNamesWinner(html);
-  const stripped = html.replace('winner: Clear price', 'round: 2');
-  assert.notEqual(stripped, html);
-  assert.throws(() => assertStatusNamesWinner(stripped), /sample has no winner line/);
-  const unnamed = html.replace('winner: Clear price', 'winner:');
-  assert.throws(() => assertStatusNamesWinner(unnamed), /sample has no winner line/);
-  const blank = html.replace('winner: Clear price', '');
-  assert.throws(() => assertStatusNamesWinner(blank), /sample has no winner line/);
+test('et status prints decision: continue and does not name Clear price', () => {
+  assertStatusContinues(html);
 
-  for (const fake of ['null', 'none', 'undefined', 'nil', 'n/a', 'na', 'false', 'pending', 'unknown', 'TBD', 'no winner', 'no-winner', '-', '?']) {
-    const sample = html.replace('winner: Clear price', `winner: ${fake}`);
-    assert.notEqual(sample, html, fake);
-    assert.throws(() => assertStatusNamesWinner(sample), /sample has no winner line/, fake);
-  }
+  const winner = html.replace(
+    '<span class="dim">decision: continue</span>',
+    '<span class="dim">winner: Clear price</span>',
+  );
+  assert.notEqual(winner, html);
+  assert.throws(() => assertStatusContinues(winner), /winner: Clear price is in the terminal/);
 
-  const sameLine = html.replace('\n<span class="dim">winner: Clear price</span>', ' winner: Clear price');
-  assert.notEqual(sameLine, html);
-  assert.throws(() => assertStatusNamesWinner(sameLine), /sample has no winner line/);
+  const both = html.replace(
+    '<span class="dim">decision: continue</span>',
+    '<span class="dim">decision: continue</span>\n<span class="dim">winner: Clear price</span>',
+  );
+  assert.notEqual(both, html);
+  assert.throws(() => assertStatusContinues(both), /winner: Clear price is in the terminal/);
 
-  const before = html
-    .replace('<span class="dim">winner: Clear price</span>', '')
-    .replace('$ et status', 'winner: Clear price\n$ et status');
-  assert.throws(() => assertStatusNamesWinner(before), /sample has no winner line/);
+  const hiddenWinner = html.replace(
+    '<span class="dim">decision: continue</span>',
+    '<span class="dim">decision: continue</span><span hidden>winner: Clear price</span>',
+  );
+  assert.notEqual(hiddenWinner, html);
+  assert.throws(() => assertStatusContinues(hiddenWinner), /winner: Clear price is in the terminal/);
+
+  const dropped = html.replace(
+    '<span class="dim">decision: continue</span>',
+    '<span class="dim">round: 2</span>',
+  );
+  assert.notEqual(dropped, html);
+  assert.throws(() => assertStatusContinues(dropped), /decision: continue missing from terminal/);
 
   const outside = html
-    .replace('<span class="dim">winner: Clear price</span>', '')
-    .replace('</body>', '<p>winner: Clear price</p></body>');
-  assert.throws(() => assertStatusNamesWinner(outside), /sample has no winner line/);
+    .replace('<span class="dim">decision: continue</span>', '<span class="dim">round: 2</span>')
+    .replace('</body>', '<p>decision: continue</p></body>');
+  assert.throws(() => assertStatusContinues(outside), /decision: continue missing from terminal/);
 
-  const hidden = html.replace('<span class="dim">', '<span class="dim" hidden>');
+  const commented = html.replace(
+    '<span class="dim">decision: continue</span>',
+    '<!-- decision: continue -->',
+  );
+  assert.notEqual(commented, html);
+  assert.throws(() => assertStatusContinues(commented), /decision: continue missing from terminal/);
+
+  const hidden = html.replace('<span class="dim">decision: continue</span>', '<span class="dim" hidden>decision: continue</span>');
   assert.notEqual(hidden, html);
-  assert.throws(() => assertStatusNamesWinner(hidden), /sample has no winner line/);
+  assert.throws(() => assertStatusContinues(hidden), /decision: continue missing from terminal/);
 
-  const comment = html.replace('<span class="dim">winner: Clear price</span>', '<!-- winner: Clear price -->');
-  assert.throws(() => assertStatusNamesWinner(comment), /sample has no winner line/);
+  const before = html.replace(
+    '<span class="prompt">$</span> et status\n<span class="dim">decision: continue</span>',
+    '<span class="dim">decision: continue</span>\n<span class="prompt">$</span> et status',
+  );
+  assert.notEqual(before, html);
+  assert.throws(() => assertStatusContinues(before), /decision: continue missing from terminal/);
 });
 
 test('a still-running round prints decision: continue and names no winner', () => {
@@ -1011,14 +1015,17 @@ test('a still-running round prints decision: continue and names no winner', () =
   const parked = moved.replace('</body>', `<p id="still-running" class="still-running">${STILL_RUNNING_SENTENCE}</p></body>`);
   assert.throws(() => assertStillRunningSentence(parked), /still-running sentence missing/);
 
-  const droppedWinner = html.replace('<span class="dim">winner: Clear price</span>', '<span class="dim">round: 2</span>');
-  assert.notEqual(droppedWinner, html);
-  assert.throws(() => assertStillRunningSentence(droppedWinner), /winner: Clear price missing from terminal/);
+  const droppedDecision = html.replace('<span class="dim">decision: continue</span>', '<span class="dim">round: 2</span>');
+  assert.notEqual(droppedDecision, html);
+  assert.throws(() => assertStillRunningSentence(droppedDecision), /decision: continue missing from terminal/);
 
-  const outsideWinner = html
-    .replace('<span class="dim">winner: Clear price</span>', '<span class="dim">decision: continue</span>')
-    .replace('</body>', '<p>winner: Clear price</p></body>');
-  assert.throws(() => assertStillRunningSentence(outsideWinner), /winner: Clear price missing from terminal/);
+  const winnerInTerminal = html.replace('<span class="dim">decision: continue</span>', '<span class="dim">winner: Clear price</span>');
+  assert.notEqual(winnerInTerminal, html);
+  assert.throws(() => assertStillRunningSentence(winnerInTerminal), /winner: Clear price is in the terminal/);
+
+  const outsideWinner = html.replace('</body>', '<p>winner: Clear price</p></body>');
+  assert.notEqual(outsideWinner, html);
+  assertStillRunningSentence(outsideWinner);
 
   const homeClaim = html.replace(STILL_RUNNING_SENTENCE, `${STILL_RUNNING_SENTENCE} The homepage round has a winner.`);
   assert.notEqual(homeClaim, html);
@@ -1537,7 +1544,8 @@ describe('landing layout', () => {
     assert.ok(apart >= 20, `terminal background ${dark.panel} blends into ${dark.body} (${apart})`);
 
     const commands = await page.locator('#terminal').innerText();
-    assert.match(commands, /\$ et login\n\$ et site add\n\$ et round start\n\$ et status\nwinner: Clear price/);
+    assert.match(commands, /\$ et login\n\$ et site add\n\$ et round start\n\$ et status\ndecision: continue/);
+    assert.doesNotMatch(commands, /winner: Clear price/);
 
     const winner = await page.evaluate(() => {
       const el = document.querySelector('.terminal .dim');
@@ -1556,7 +1564,7 @@ describe('landing layout', () => {
         termRight: term.right,
       };
     });
-    assert.equal(winner.text, 'winner: Clear price');
+    assert.equal(winner.text, 'decision: continue');
     assert.equal(winner.display, 'inline');
     assert.equal(winner.visibility, 'visible');
     assert.ok(winner.opacity >= 0.99, `winner opacity ${winner.opacity}`);
@@ -1621,7 +1629,8 @@ describe('landing layout', () => {
         const ratio = contrastRatio(rgb(info.color), rgb(info.bg));
         assert.ok(ratio >= 4.5, `${scheme} ${width} contrast ${ratio.toFixed(2)} ${info.color} on ${info.bg}`);
         assert.equal(info.overflow, 0, `${scheme} ${width} page overflow ${info.overflow}`);
-        assert.equal(info.winner, 'winner: Clear price');
+        assert.equal(info.winner, 'decision: continue');
+        assert.equal(info.heroText.includes('winner: Clear price'), false, `${scheme} ${width} hero names Clear price`);
         assert.equal(info.noteHasDecision, false, `${scheme} ${width} dogfood note has the status sentence`);
         assert.equal(claimsLiveRoundWinner(info.heroText), false, `${scheme} ${width} hero claims a live round winner`);
       }
