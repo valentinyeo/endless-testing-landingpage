@@ -424,6 +424,43 @@ function assertStatusContinues(source) {
   }
 }
 
+const ALLOWED_LOGIN_LINES = new Set(['et login --email', 'et login --code']);
+
+function assertTerminalLogin(source) {
+  const region = terminalRegion(source);
+  assert.ok(region, 'terminal sample missing');
+  const rules = concealingRules(pageCss(source.replace(/<!--[\s\S]*?-->/g, '')));
+  const terminalEl = elementFrom('div', region.attrs);
+  if (concealedAttrs(region.attrs) || chainIsHidden(rules, [terminalEl])) {
+    assert.fail('terminal login line missing');
+  }
+  const visible = stripConcealed(
+    region.inner
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<template\b[^>]*>[\s\S]*?<\/template>/gi, '')
+      .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, ''),
+    (tag, attrs) => chainIsHidden(rules, [elementFrom(tag, attrs), terminalEl]),
+  )
+    .replace(/<br\b[^>]*>/gi, '\n')
+    .replace(/<[^>]+>/g, '');
+  const lines = normalizePage(visible)
+    .split('\n')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+    .map((item) => item.replace(/^\$\s*/, ''))
+    .filter((item) => /^et login\b/.test(item));
+  if (lines.length === 0) {
+    assert.fail('terminal login line missing');
+  }
+  for (const line of lines) {
+    if (!ALLOWED_LOGIN_LINES.has(line)) {
+      assert.fail('terminal login line needs --email or --code');
+    }
+  }
+}
+
 const STILL_RUNNING_SENTENCE = 'A round that is still running prints decision: continue and does not name a winner.';
 
 function claimsLiveRoundWinner(text) {
@@ -960,6 +997,22 @@ test('the page does not ask for an OpenRouter key', () => {
   assertNoOpenRouterKey('OpenRouter keyboard');
   const far = `Traffic is not sent to OpenRouter.${' '.repeat(400)}if (event.key === 'Escape') closeMenu();`;
   assertNoOpenRouterKey(far);
+});
+
+test('terminal login line is et login --email or et login --code', () => {
+  assertTerminalLogin(html);
+  const bare = html.replace('> et login --email', '> et login');
+  assert.notEqual(bare, html);
+  assert.throws(() => assertTerminalLogin(bare), /--email or --code/);
+  const coded = html.replace('> et login --email', '> et login --code');
+  assert.notEqual(coded, html);
+  assertTerminalLogin(coded);
+  const token = html.replace('> et login --email', '> et login --token');
+  assert.notEqual(token, html);
+  assert.throws(() => assertTerminalLogin(token), /--email or --code/);
+  const dropped = html.replace('> et login --email\n', '>\n');
+  assert.notEqual(dropped, html);
+  assert.throws(() => assertTerminalLogin(dropped), /terminal login line missing/);
 });
 
 test('et status prints decision: continue and does not name Clear price', () => {
@@ -1657,7 +1710,7 @@ describe('landing layout', () => {
     assert.ok(apart >= 20, `terminal background ${dark.panel} blends into ${dark.body} (${apart})`);
 
     const commands = normalizePage(await page.locator('#terminal').innerText());
-    assert.match(commands, /\$ et login\n\$ et site add\n\$ et round start\n\$ et status\ndecision: continue/);
+    assert.match(commands, /\$ et login --(?:email|code)\n\$ et site add\n\$ et round start\n\$ et status\ndecision: continue/);
     assert.equal(commands.toLowerCase().replace(/\s+/g, ' ').includes('winner: clear price'), false);
 
     const winner = await page.evaluate(() => {
