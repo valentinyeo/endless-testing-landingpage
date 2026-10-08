@@ -670,6 +670,40 @@ test('primary links use Start 7-day free trial and reject the shorter label', ()
   assert.throws(() => assertPrimaryTrialGoal(reverted), /shorter trial label/);
 });
 
+const INSTALL_DOCS = 'https://docs.endlesstesting.ai/getting-started/install/';
+const PRIVATE_REPO = 'github.com/valentinyeo/endless-testing';
+
+function assertInstallDocLinks(source) {
+  if (source.includes(PRIVATE_REPO)) assert.fail('page links the private GitHub repo');
+  const links = [];
+  for (const match of source.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)) {
+    const href = (match[1].match(/\bhref="([^"]*)"/) || [])[1] || '';
+    const text = match[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    if (href === INSTALL_DOCS || text === 'Install et') links.push({ href, text });
+  }
+  if (links.length !== 3) assert.fail('install doc links missing');
+  for (const link of links) {
+    if (link.href !== INSTALL_DOCS) assert.fail('install doc href wrong');
+    if (link.text !== 'Install et') assert.fail('install doc label wrong');
+  }
+}
+
+test('install links point at the install docs and the private repo is gone', () => {
+  assertInstallDocLinks(html);
+  const leaked = html.replaceAll(INSTALL_DOCS, 'https://github.com/valentinyeo/endless-testing');
+  assert.notEqual(leaked, html);
+  assert.throws(() => assertInstallDocLinks(leaked), /private GitHub repo/);
+  const relabeled = html.replaceAll('>Install et<', '>GitHub<');
+  assert.notEqual(relabeled, html);
+  assert.throws(() => assertInstallDocLinks(relabeled), /install doc label wrong/);
+  const dropped = html.replace(
+    `<a href="${INSTALL_DOCS}">Install et</a>`,
+    '<a href="https://docs.endlesstesting.ai">Docs</a>',
+  );
+  assert.notEqual(dropped, html);
+  assert.throws(() => assertInstallDocLinks(dropped), /install doc links missing/);
+});
+
 const INSTALL_FILES = [
   'et-x86_64-linux-musl',
   'et-aarch64-linux-musl',
