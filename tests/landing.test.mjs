@@ -101,6 +101,24 @@ function assertNoOpenRouterKey(source) {
   if (asksForOpenRouterKey(source)) assert.fail('page asks for an OpenRouter key');
 }
 
+function assertDogfoodRounds(source) {
+  const match = source.match(/<p id="dogfood-note">([\s\S]*?)<\/p>/);
+  if (!match) assert.fail('dogfood note missing');
+  const note = match[1];
+  if (!note.includes('This page runs the Endless Testing SDK.')) {
+    assert.fail('dogfood note dropped the SDK line');
+  }
+  if (!note.includes('endlesstesting-100')) assert.fail('dogfood note missing round endlesstesting-100');
+  if (!note.includes('valentinyeo-2')) assert.fail('dogfood note missing round valentinyeo-2');
+  if (!note.includes('The homepage is round endlesstesting-100.')) {
+    assert.fail('dogfood note does not name the homepage round');
+  }
+  if (!note.includes('valentinyeo.com is round valentinyeo-2.')) {
+    assert.fail('dogfood note does not name the valentinyeo.com round');
+  }
+  if (/\bwinner\b/i.test(note)) assert.fail('dogfood note claims a winner');
+}
+
 function terminalCode(source) {
   const terminal = source.match(/id="terminal"[\s\S]*?<code>([\s\S]*?)<\/code>/);
   assert.ok(terminal, 'terminal sample missing');
@@ -635,6 +653,26 @@ test('landing copy has the required facts and no em dashes', () => {
   assert.equal(Number(save[1]), (299 - 249) * 12);
   assert.match(html, /rel="icon" href="\/images\/icon\.png"/);
   assert.equal(fs.existsSync(path.join(root, 'images/icon.png')), true);
+});
+
+test('dogfood note names the two live rounds', () => {
+  assertDogfoodRounds(html);
+  const noteMatch = html.match(/<p id="dogfood-note">([\s\S]*?)<\/p>/);
+  assert.ok(noteMatch, 'dogfood note missing');
+  const tagged = noteMatch[0];
+  const note = noteMatch[1];
+  const dropHome = html.replace(
+    tagged,
+    '<p id="dogfood-note">' + note.replace('endlesstesting-100', 'gone-home') + '</p><p>endlesstesting-100</p>',
+  );
+  assert.throws(() => assertDogfoodRounds(dropHome), /endlesstesting-100/);
+  const dropSite = html.replace(
+    tagged,
+    '<p id="dogfood-note">' + note.replace('valentinyeo-2', 'gone-site') + '</p><p>valentinyeo-2</p>',
+  );
+  assert.throws(() => assertDogfoodRounds(dropSite), /valentinyeo-2/);
+  const claim = html.replace(tagged, '<p id="dogfood-note">' + note + ' The winner is the homepage.</p>');
+  assert.throws(() => assertDogfoodRounds(claim), /winner/);
 });
 
 test('agent files and share metadata are on the page', () => {
