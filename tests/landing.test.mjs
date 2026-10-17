@@ -102,37 +102,16 @@ function assertNoOpenRouterKey(source) {
 }
 
 const SDK_SENTENCE = 'This page runs the Endless Testing SDK.';
-const HOME_SENTENCE = 'The homepage is round endlesstesting-100.';
-const SITE_SENTENCE = 'valentinyeo.com is round valentinyeo-2.';
-const RUNNING_SENTENCE = 'Both rounds are still running.';
-const NO_WINNER_SENTENCE = 'No winner has been called.';
+const NO_WINNER_SENTENCE = 'A winner shows here only after one is called.';
 
 function noteClaimsWinner(note) {
-  const rest = note.replace(/\bno winner has been called\b/gi, ' ');
+  const rest = note.split(NO_WINNER_SENTENCE).join(' ');
   return /\bwinners?\b|\bwinning\b|\bwins?\b|\bwon\b/i.test(rest);
 }
 
 function noteNamesWinningLine(note) {
-  const rest = note.replace(/\bno winner has been called\b/gi, ' ');
+  const rest = note.split(NO_WINNER_SENTENCE).join(' ');
   return /\b(?:beat|beats|beaten)\b/i.test(rest);
-}
-
-function noteDeniesRunning(note) {
-  let from = 0;
-  while (from < note.length) {
-    const idx = note.indexOf(RUNNING_SENTENCE, from);
-    if (idx < 0) break;
-    const prefix = note.slice(0, idx);
-    if (/\b(?:not|no|never)\s+$/i.test(prefix)) return true;
-    from = idx + RUNNING_SENTENCE.length;
-  }
-  const rest = note.split(RUNNING_SENTENCE).join(' ');
-  if (/\brunning\b/i.test(rest)) return true;
-  if (/\b(?:stopped|finished|ended|completed)\b/i.test(rest)) return true;
-  if (/\bno longer\b/i.test(rest)) return true;
-  if (/\bneither\b/i.test(rest)) return true;
-  if (/\bnot\b(?:\s+\w+){0,6}\s+collecting\b/i.test(rest)) return true;
-  return false;
 }
 
 function noteGivesLift(note) {
@@ -334,10 +313,6 @@ function hasBounded(text, sentence) {
   return false;
 }
 
-function hasSlug(text, slug) {
-  return new RegExp(`(?<![A-Za-z0-9-])${slug}(?![A-Za-z0-9-])`).test(text);
-}
-
 function dogfoodNoteText(source) {
   const uncommented = source.replace(/<!--[\s\S]*?-->/g, '');
   const rules = concealingRules(pageCss(uncommented));
@@ -355,16 +330,11 @@ function dogfoodNoteText(source) {
   return normalizePage(visible.replace(/<br\b[^>]*>/gi, ' ').replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim();
 }
 
-function assertDogfoodRounds(source) {
+function assertDogfoodNote(source) {
   const note = dogfoodNoteText(source);
   if (!hasBounded(note, SDK_SENTENCE)) assert.fail('dogfood note dropped the SDK line');
-  if (!hasSlug(note, 'endlesstesting-100')) assert.fail('dogfood note missing round endlesstesting-100');
-  if (!hasSlug(note, 'valentinyeo-2')) assert.fail('dogfood note missing round valentinyeo-2');
-  if (!hasBounded(note, HOME_SENTENCE)) assert.fail('dogfood note does not name the homepage round');
-  if (!hasBounded(note, SITE_SENTENCE)) assert.fail('dogfood note does not name the valentinyeo.com round');
-  if (!hasBounded(note, RUNNING_SENTENCE)) assert.fail('dogfood note missing still running');
-  if (!hasBounded(note, NO_WINNER_SENTENCE)) assert.fail('dogfood note does not say no winner has been called');
-  if (noteDeniesRunning(note)) assert.fail('dogfood note says a round is not still running');
+  if (/\b[a-z][a-z0-9]*-\d+\b/i.test(note)) assert.fail('dogfood note names a round');
+  if (!hasBounded(note, NO_WINNER_SENTENCE)) assert.fail('dogfood note does not say when a winner shows');
   if (noteClaimsWinner(note)) assert.fail('dogfood note claims a winner');
   if (noteNamesWinningLine(note)) assert.fail('dogfood note names a winning line');
   if (noteGivesLift(note)) assert.fail('dogfood note gives a lift');
@@ -533,7 +503,7 @@ const STILL_RUNNING_SENTENCE = 'A round that is still running prints decision: c
 
 function claimsLiveRoundWinner(text) {
   const rest = text.split(STILL_RUNNING_SENTENCE).join(' ');
-  const subject = '(?:the\\s+)?(?:homepage(?:\\s+round)?|endlesstesting-100|valentinyeo\\.com|valentinyeo-2)';
+  const subject = '(?:the\\s+)?(?:homepage(?:\\s+round)?|valentinyeo\\.com|[a-z]+-\\d+)';
   const patterns = [
     new RegExp(`${subject}\\s+(?:has|have|got|gets)\\s+(?:a|the|its)\\s+winner`, 'i'),
     new RegExp(`${subject}\\s+is\\s+(?:a\\s+|the\\s+)?winner`, 'i'),
@@ -1489,10 +1459,11 @@ test('a still-running round prints decision: continue and names no winner', () =
     'valentinyeo.com is a winner.',
     'valentinyeo.com has the winner.',
     'The winner of the homepage round is Clear price.',
-    'endlesstesting-100 got a winner.',
+    'endlesstesting-104 got a winner.',
+    'future-7 has a winner.',
     'The homepage has the winner.',
     'We called a winner for valentinyeo.com.',
-    'The winner for endlesstesting-100 is Clear price.',
+    'The winner for endlesstesting-104 is Clear price.',
     "The homepage round's winner is Clear price.",
   ];
   for (const claim of claims) {
@@ -1568,45 +1539,27 @@ test('landing copy has the required facts and no em dashes', () => {
   assert.equal(fs.existsSync(path.join(root, 'images/icon.png')), true);
 });
 
-test('dogfood note names the two live rounds', () => {
-  assertDogfoodRounds(html);
+test('dogfood note stays round-independent without claiming results', () => {
+  assertDogfoodNote(html);
   const noteMatch = html.match(/<p id="dogfood-note">([\s\S]*?)<\/p>/);
   assert.ok(noteMatch, 'dogfood note missing');
   const tagged = noteMatch[0];
   const note = noteMatch[1];
-  const dropHome = html.replace(
-    tagged,
-    '<p id="dogfood-note">' + note.replace('endlesstesting-100', 'gone-home') + '</p><p>endlesstesting-100</p>',
-  );
-  assert.throws(() => assertDogfoodRounds(dropHome), /endlesstesting-100/);
-  const dropSite = html.replace(
-    tagged,
-    '<p id="dogfood-note">' + note.replace('valentinyeo-2', 'gone-site') + '</p><p>valentinyeo-2</p>',
-  );
-  assert.throws(() => assertDogfoodRounds(dropSite), /valentinyeo-2/);
+  const namedRound = html.replace(tagged, `<p id="dogfood-note">${note} The homepage is round endlesstesting-104.</p>`);
+  assert.notEqual(namedRound, html);
+  assert.throws(() => assertDogfoodNote(namedRound), /dogfood note names a round/);
+  assert.equal(noteClaimsWinner(NO_WINNER_SENTENCE), false);
   const claim = html.replace(tagged, '<p id="dogfood-note">' + note + ' The winner is the homepage.</p>');
-  assert.throws(() => assertDogfoodRounds(claim), /winner/);
-  const dropRunning = html.replace(
-    tagged,
-    '<p id="dogfood-note">' + note.replace('still running', 'still listed') + '</p>',
-  );
-  assert.notEqual(dropRunning, html);
-  assert.throws(() => assertDogfoodRounds(dropRunning), /still running/);
-  const hideRunning = html.replace(
-    tagged,
-    `<p id="dogfood-note">${SDK_SENTENCE} ${HOME_SENTENCE} ${SITE_SENTENCE} <span hidden>${RUNNING_SENTENCE}</span> ${NO_WINNER_SENTENCE}</p>`,
-  );
-  assert.notEqual(hideRunning, html);
-  assert.throws(() => assertDogfoodRounds(hideRunning), /still running/);
+  assert.throws(() => assertDogfoodNote(claim), /winner/);
   const lift = html.replace(tagged, `<p id="dogfood-note">${note} Lift 12%.</p>`);
   assert.notEqual(lift, html);
-  assert.throws(() => assertDogfoodRounds(lift), /lift/);
+  assert.throws(() => assertDogfoodNote(lift), /lift/);
   const liftWord = html.replace(tagged, `<p id="dogfood-note">${note} The lift is large.</p>`);
   assert.notEqual(liftWord, html);
-  assert.throws(() => assertDogfoodRounds(liftWord), /lift/);
+  assert.throws(() => assertDogfoodNote(liftWord), /lift/);
   const liftPct = html.replace(tagged, `<p id="dogfood-note">${note} Up 12%.</p>`);
   assert.notEqual(liftPct, html);
-  assert.throws(() => assertDogfoodRounds(liftPct), /lift/);
+  assert.throws(() => assertDogfoodNote(liftPct), /lift/);
   for (const liftText of [
     'Up 12 percent.',
     'Up 12 per cent.',
@@ -1620,56 +1573,26 @@ test('dogfood note names the two live rounds', () => {
   ]) {
     const gave = html.replace(tagged, `<p id="dogfood-note">${note} ${liftText}</p>`);
     assert.notEqual(gave, html, liftText);
-    assert.throws(() => assertDogfoodRounds(gave), /lift/, liftText);
+    assert.throws(() => assertDogfoodNote(gave), /lift/, liftText);
   }
   const dropCalled = html.replace(
     tagged,
-    '<p id="dogfood-note">' + note.replace(' No winner has been called.', '') + '</p>',
+    '<p id="dogfood-note">' + note.replace(` ${NO_WINNER_SENTENCE}`, '') + '</p>',
   );
   assert.notEqual(dropCalled, html);
-  assert.throws(() => assertDogfoodRounds(dropCalled), /no winner has been called/);
+  assert.throws(() => assertDogfoodNote(dropCalled), /when a winner shows/);
   const hideCalled = html.replace(
     tagged,
-    `<p id="dogfood-note">${SDK_SENTENCE} ${HOME_SENTENCE} ${SITE_SENTENCE} ${RUNNING_SENTENCE} <span hidden>${NO_WINNER_SENTENCE}</span></p>`,
+    `<p id="dogfood-note">${SDK_SENTENCE} Rounds run on this page all the time. <span hidden>${NO_WINNER_SENTENCE}</span></p>`,
   );
   assert.notEqual(hideCalled, html);
-  assert.throws(() => assertDogfoodRounds(hideCalled), /no winner has been called/);
+  assert.throws(() => assertDogfoodNote(hideCalled), /when a winner shows/);
   const gotWin = html.replace(tagged, `<p id="dogfood-note">${note} The homepage got the win.</p>`);
   assert.notEqual(gotWin, html);
-  assert.throws(() => assertDogfoodRounds(gotWin), /winner/);
+  assert.throws(() => assertDogfoodNote(gotWin), /winner/);
   const beat = html.replace(tagged, `<p id="dogfood-note">${note} The homepage line beat the other.</p>`);
   assert.notEqual(beat, html);
-  assert.throws(() => assertDogfoodRounds(beat), /winning line/);
-  const negated = html.replace(
-    tagged,
-    '<p id="dogfood-note">' + note.replace('Both rounds are still running.', 'Not Both rounds are still running.') + '</p>',
-  );
-  assert.notEqual(negated, html);
-  assert.throws(() => assertDogfoodRounds(negated), /not still running/);
-  for (const denial of [
-    'The rounds have stopped.',
-    'valentinyeo-2 is finished.',
-    'Neither round is still collecting visits.',
-    'It is untrue that both rounds are still running.',
-  ]) {
-    const denied = html.replace(tagged, `<p id="dogfood-note">${note} ${denial}</p>`);
-    assert.notEqual(denied, html, denial);
-    assert.throws(() => assertDogfoodRounds(denied), /not still running/, denial);
-  }
-  const hiddenStop = html.replace(
-    tagged,
-    `<p id="dogfood-note">${note} <span hidden>The rounds have stopped.</span></p>`,
-  );
-  assert.notEqual(hiddenStop, html);
-  assertDogfoodRounds(hiddenStop);
-  const collecting = html.replace(
-    tagged,
-    `<p id="dogfood-note">${note} Both rounds are still collecting visits.</p>`,
-  );
-  assert.notEqual(collecting, html);
-  assertDogfoodRounds(collecting);
-
-  const rounds = `${HOME_SENTENCE} ${SITE_SENTENCE}`;
+  assert.throws(() => assertDogfoodNote(beat), /winning line/);
   for (const wrap of [
     (inner) => `<span hidden>${inner}</span>`,
     (inner) => `<span style="display:none">${inner}</span>`,
@@ -1681,21 +1604,21 @@ test('dogfood note names the two live rounds', () => {
     (inner) => `<!-- ${inner} -->`,
     (inner) => `<script>${inner}</script>`,
   ]) {
-    const concealed = html.replace(tagged, `<p id="dogfood-note">${SDK_SENTENCE} ${wrap(rounds)}</p>`);
+    const concealed = html.replace(tagged, `<p id="dogfood-note">${wrap(SDK_SENTENCE)} ${NO_WINNER_SENTENCE}</p>`);
     assert.notEqual(concealed, html);
-    assert.throws(() => assertDogfoodRounds(concealed), /endlesstesting-100/);
+    assert.throws(() => assertDogfoodNote(concealed), /SDK/);
   }
 
   const decoy = html.replace(tagged, `<!-- ${tagged} --><p id="dogfood-note">${SDK_SENTENCE}</p>`);
   assert.notEqual(decoy, html);
-  assert.throws(() => assertDogfoodRounds(decoy), /endlesstesting-100/);
+  assert.throws(() => assertDogfoodNote(decoy), /when a winner shows/);
 
   const hiddenP = html.replace('<p id="dogfood-note">', '<p id="dogfood-note" hidden>');
   assert.notEqual(hiddenP, html);
-  assert.throws(() => assertDogfoodRounds(hiddenP), /dogfood note missing/);
+  assert.throws(() => assertDogfoodNote(hiddenP), /dogfood note missing/);
   const noneP = html.replace('<p id="dogfood-note">', '<p id="dogfood-note" style="display:none">');
   assert.notEqual(noneP, html);
-  assert.throws(() => assertDogfoodRounds(noneP), /dogfood note missing/);
+  assert.throws(() => assertDogfoodNote(noneP), /dogfood note missing/);
 
   for (const decl of ['display: none', 'visibility: hidden', 'opacity: 0', 'font-size: 0', 'color: transparent']) {
     const hiddenCss = html.replace(
@@ -1703,7 +1626,7 @@ test('dogfood note names the two live rounds', () => {
       `#dogfood-note { margin-top: 0.4rem; ${decl}; }`,
     );
     assert.notEqual(hiddenCss, html, decl);
-    assert.throws(() => assertDogfoodRounds(hiddenCss), /dogfood note missing/, decl);
+    assert.throws(() => assertDogfoodNote(hiddenCss), /dogfood note missing/, decl);
   }
 
   const unusedClass = html.replace(
@@ -1711,28 +1634,28 @@ test('dogfood note names the two live rounds', () => {
     '#dogfood-note { margin-top: 0.4rem; }\n        .gone { display: none; }',
   );
   assert.notEqual(unusedClass, html);
-  assertDogfoodRounds(unusedClass);
+  assertDogfoodNote(unusedClass);
   const classHide = unusedClass.replace('<p id="dogfood-note">', '<p id="dogfood-note" class="gone">');
   assert.notEqual(classHide, unusedClass);
-  assert.throws(() => assertDogfoodRounds(classHide), /dogfood note missing/);
+  assert.throws(() => assertDogfoodNote(classHide), /dogfood note missing/);
   const spanGone = unusedClass.replace(
     tagged,
-    `<p id="dogfood-note">${SDK_SENTENCE} <span class="gone">${HOME_SENTENCE} ${SITE_SENTENCE}</span></p>`,
+    `<p id="dogfood-note"><span class="gone">${SDK_SENTENCE}</span> ${NO_WINNER_SENTENCE}</p>`,
   );
   assert.notEqual(spanGone, unusedClass);
-  assert.throws(() => assertDogfoodRounds(spanGone), /endlesstesting-100/);
+  assert.throws(() => assertDogfoodNote(spanGone), /SDK/);
   const wrapHide = html.replace(
     '.wrap { width: min(1080px, calc(100% - 2rem)); margin-inline: auto; }',
     '.wrap { width: min(1080px, calc(100% - 2rem)); margin-inline: auto; font-size: 0; }',
   );
   assert.notEqual(wrapHide, html);
-  assert.throws(() => assertDogfoodRounds(wrapHide), /dogfood note missing/);
+  assert.throws(() => assertDogfoodNote(wrapHide), /dogfood note missing/);
   const childMiss = html.replace(
     '#dogfood-note { margin-top: 0.4rem; }',
     '#dogfood-note { margin-top: 0.4rem; }\n        footer > p { display: none; }',
   );
   assert.notEqual(childMiss, html);
-  assertDogfoodRounds(childMiss);
+  assertDogfoodNote(childMiss);
 
   for (const claimText of [
     'The &#119;inner is the homepage.',
@@ -1740,36 +1663,19 @@ test('dogfood note names the two live rounds', () => {
     'The &amp;#119;inner is the homepage.',
     'The win\u200bner is the homepage.',
     'The winners are the homepage.',
+    'The homepage has a winner.',
     'The homepage is winning.',
     'The homepage wins.',
     'The homepage won.',
   ]) {
     const claimed = html.replace(tagged, `<p id="dogfood-note">${note} ${claimText}</p>`);
     assert.notEqual(claimed, html, claimText);
-    assert.throws(() => assertDogfoodRounds(claimed), /winner/, claimText);
+    assert.throws(() => assertDogfoodNote(claimed), /winner/, claimText);
   }
 
-  const dotted = html.replace(
-    tagged,
-    `<p id="dogfood-note">${SDK_SENTENCE} The homepage is round endlesstesting-100.9. ${SITE_SENTENCE}</p>`,
-  );
-  assert.notEqual(dotted, html);
-  assert.throws(() => assertDogfoodRounds(dotted), /homepage round/);
-  const siteDotted = html.replace(
-    tagged,
-    `<p id="dogfood-note">${SDK_SENTENCE} ${HOME_SENTENCE} valentinyeo.com is round valentinyeo-2.9.</p>`,
-  );
-  assert.notEqual(siteDotted, html);
-  assert.throws(() => assertDogfoodRounds(siteDotted), /valentinyeo\.com round/);
-  const swapped = html.replace(
-    tagged,
-    `<p id="dogfood-note">${SDK_SENTENCE} The homepage is round valentinyeo-2. valentinyeo.com is round endlesstesting-100.</p>`,
-  );
-  assert.notEqual(swapped, html);
-  assert.throws(() => assertDogfoodRounds(swapped), /homepage round/);
-  const droppedSdk = html.replace(tagged, `<p id="dogfood-note">${HOME_SENTENCE} ${SITE_SENTENCE}</p>`);
+  const droppedSdk = html.replace(tagged, `<p id="dogfood-note">${NO_WINNER_SENTENCE}</p>`);
   assert.notEqual(droppedSdk, html);
-  assert.throws(() => assertDogfoodRounds(droppedSdk), /SDK/);
+  assert.throws(() => assertDogfoodNote(droppedSdk), /SDK/);
 });
 
 test('agent files and share metadata are on the page', () => {
@@ -2236,13 +2142,10 @@ describe('landing layout', () => {
       const note = sample.note;
       const noteText = normalizePage(note.text).replace(/\s+/g, ' ').trim();
       assert.match(noteText, /This page runs the Endless Testing SDK\./);
-      assert.match(noteText, /The homepage is round endlesstesting-100\./);
-      assert.match(noteText, /valentinyeo\.com is round valentinyeo-2\./);
-      assert.match(noteText, /Both rounds are still running\./);
-      assert.match(noteText, /No winner has been called\./);
+      assert.ok(hasBounded(noteText, NO_WINNER_SENTENCE));
+      assert.doesNotMatch(noteText, /\b[a-z][a-z0-9]*-\d+\b/i, `${scheme} dogfood note names a round`);
       assert.equal(noteClaimsWinner(noteText), false, `${scheme} dogfood note claims a winner`);
       assert.equal(noteNamesWinningLine(noteText), false, `${scheme} dogfood note names a winning line`);
-      assert.equal(noteDeniesRunning(noteText), false, `${scheme} dogfood note says a round is not still running`);
       assert.equal(noteGivesLift(noteText), false, `${scheme} dogfood note gives a lift`);
       assert.notEqual(note.display, 'none', `${scheme} dogfood note display`);
       assert.equal(note.visibility, 'visible', `${scheme} dogfood note visibility`);
