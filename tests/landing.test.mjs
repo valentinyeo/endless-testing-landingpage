@@ -2253,3 +2253,5 @@ describe('landing layout', () => {
     }
   });
 });
+
+test('planted failure for ENDL-337 proof', () => { assert.equal(1, 2); });
