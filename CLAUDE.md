@@ -73,7 +73,7 @@ php -S localhost:8000
 
 ## Notes
 
-- Not a git repository (no version control configured)
-- No package.json or build tooling
+- Tests: `node --test tests/landing.test.mjs` (needs Playwright 1.58.2 in `~/.dev-browser` and its Chromium); the `test` GitHub check runs it on every pull request and push to main
+- No package.json or build tooling; keep it that way, Cloudflare Pages publishes the repo folder as is
 - No external CSS/JS files - everything is self-contained
 - Performance monitoring logs page load time to console (lines 407-410)

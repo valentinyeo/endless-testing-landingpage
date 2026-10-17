@@ -3,14 +3,16 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { chromium } from '/home/valentin/.dev-browser/node_modules/playwright/index.mjs';
+
+const { chromium } = await import(path.join(os.homedir(), '.dev-browser/node_modules/playwright/index.mjs'));
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
 function newestChrome() {
-  const base = '/home/valentin/.cache/ms-playwright';
+  const base = path.join(os.homedir(), '.cache/ms-playwright');
   const versions = fs.readdirSync(base)
     .filter((name) => name.startsWith('chromium-'))
     .map((name) => ({ name, n: Number(name.split('-')[1]) }))
