@@ -1,10 +1,11 @@
-name: nocomments
+name: no-comments
 on:
   pull_request:
   push:
     branches: [main]
 jobs:
-  nocomments:
+  no-comments:
+    name: no-comments
     runs-on: [self-hosted, contabo]
     timeout-minutes: 5
     steps:
