@@ -5,6 +5,7 @@ on:
     branches: [main]
 jobs:
   landing:
+    if: ${{ vars.ENABLE_HOSTED_CI == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
