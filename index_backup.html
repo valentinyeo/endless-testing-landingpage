@@ -409,7 +409,6 @@
     </footer>
 
     <script>
-        // Minimal JavaScript for smooth scrolling and basic interactions
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -420,13 +419,11 @@
             });
         });
 
-        // Simple performance monitoring
         window.addEventListener('load', () => {
             const loadTime = performance.now();
             console.log(`Page loaded in ${loadTime.toFixed(2)}ms`);
         });
 
-        // Unfold comparison table rows
         const comparisonRows = document.querySelectorAll('.comparison-table tbody tr');
         let currentRowIndex = 0;
 
