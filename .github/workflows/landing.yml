@@ -1,0 +1,27 @@
+name: landing-page
+on:
+  pull_request:
+    paths:
+      - '**/*.html'
+      - 'images/**'
+      - 'og.*'
+      - 'llms*.txt'
+      - 'robots.txt'
+      - 'sitemap.xml'
+      - 'tests/**'
+      - '.github/workflows/landing.yml'
+permissions:
+  contents: read
+jobs:
+  landing-page:
+    name: landing-page
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install playwright@1.58.2
+      - run: npx playwright install --with-deps chromium
+      - run: node --test tests/landing.test.mjs
