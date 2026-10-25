@@ -1,0 +1,12 @@
+name: nocomments
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  nocomments:
+    runs-on: [self-hosted, linux, x64, contabo]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: node scripts/nocomments-scan.mjs --check .
