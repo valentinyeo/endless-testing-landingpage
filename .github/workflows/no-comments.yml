@@ -6,7 +6,7 @@ on:
 jobs:
   no-comments:
     name: no-comments
-    runs-on: [self-hosted, contabo]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
