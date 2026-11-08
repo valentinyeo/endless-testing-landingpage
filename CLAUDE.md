@@ -73,7 +73,7 @@ php -S localhost:8000
 
 ## Notes
 
-- Tests: `node --test tests/landing.test.mjs` (needs Playwright 1.58.2 in `~/.dev-browser` and its Chromium). It runs by hand only: a private repo gets no GitHub-hosted minutes and headless browsers are not run on the shared server, so no workflow runs it. The `nocomments` check runs `scripts/nocomments-scan.mjs` on the repo's self-hosted runner
+- Tests: `node --test tests/landing.test.mjs` (needs Playwright 1.58.2 in `~/.dev-browser` and its Chromium). It runs by hand only: a private repo gets no GitHub-hosted minutes and headless browsers are not run on the shared server, so no workflow runs it. The `nocomments` check runs `scripts/nocomments-scan.mjs` on a GitHub-hosted runner. CI runs only on GitHub-hosted runners; see house rules (2026-11-08).
 - No package.json or build tooling; keep it that way, Cloudflare Pages publishes the repo folder as is
 - No external CSS/JS files - everything is self-contained
 - Performance monitoring logs page load time to console (lines 407-410)
